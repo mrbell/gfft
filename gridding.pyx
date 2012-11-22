@@ -1,10 +1,33 @@
 #cython: boundscheck=False
 #cython: wraparound=False
-# -*- coding: utf-8 -*-
 """
-Created on Mon Mar 12 13:07:56 2012
+gridding.pyx
 
-@author: mrbell
+This file contains the gridding functions used in the GFFT package. We use 
+a gridding procedure as described in the paper
+
+Beatty, P.J. and Nishimura, D.G. and Pauly, J.M. "Rapid gridding reconstruction 
+with a minimal oversampling ratio", IEEE Transactions on Medical Imaging, Vol. 24,
+Num. 6, 2005
+"""
+
+"""
+Copyright 2012 Michael Bell, Henrik Junklewitz
+
+This file is part of GFFT.
+
+GFFT is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GFFT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GFFT.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import numpy as np
