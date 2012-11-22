@@ -16,6 +16,6 @@ Features include:
   - Handles phase shifting of data for arbitrary axis definitions whether 
     zero-centered or centered at any other location along the input/output axes.
 
-For more information, please refer to the [GFFT Wiki](https://bitbucket.org/mrbell/gfft/wiki).
+For more information, please refer to the [GFFT Wiki](https://github.com/mrbell/gfft/wiki).
 
 GFFT is licensed under the [GPLv3](http://www.gnu.org/licenses/gpl.html).
