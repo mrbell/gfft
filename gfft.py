@@ -1,25 +1,35 @@
-# -*- coding: utf-8 -*-
 """
-Created on Thu Mar  8 19:58:41 2012
-
-@author: mrbell, henrikju
-
-GFFT package
+GFFT
 
 This package mainly consists of a single function, gfft, which is a generalized 
 Fourier transformation function that can transform between regularly- or 
 irregularly-spaced, N-D fields. Gridding and degridding is performed when 
 irregularly spaced fields are requested. Gridding is only supported for 1-, 2-,
 or 3-D fields.
-
 """
 
-# TODO: If ftmachine = 'none', still do shifting!
+"""
+Copyright 2012 Michael Bell, Henrik Junklewitz
+
+This file is part of GFFT.
+
+GFFT is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GFFT is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GFFT.  If not, see <http://www.gnu.org/licenses/>.
+"""
 
 import numpy as np
 import warnings
 
-#import gridding_mp as gridding
 import gridding 
 
 def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \

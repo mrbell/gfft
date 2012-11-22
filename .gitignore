@@ -1,0 +1,6 @@
+*.pyc
+*.c
+*.so
+*.log
+build/
+.spyderproject
