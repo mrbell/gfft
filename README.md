@@ -6,6 +6,7 @@ case where the data is not defined on a regularly spaced grid. This is commonly
 the case in applications such as radio interferometry and medical imaging. 
 
 Features include:
+
   - Fast transformations between regular to regular, regular to irregular, 
     irregular to regular, and irregular to irregular spaces.
   - Efficiently use with Hermitian symmetric data. One can store only half of 
