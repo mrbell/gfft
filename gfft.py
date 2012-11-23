@@ -5,7 +5,8 @@ This package mainly consists of a single function, gfft, which is a generalized
 Fourier transformation function that can transform between regularly- or 
 irregularly-spaced, N-D fields. Gridding and degridding is performed when 
 irregularly spaced fields are requested. Gridding is only supported for 1-, 2-,
-or 3-D fields.
+or 3-D fields. The function also handles arbitrary phase shifts in the input and
+output arrays.
 """
 
 """
@@ -30,7 +31,144 @@ along with GFFT.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import warnings
 
-import gridding 
+import gridding
+
+VERSION = '0.5.0'
+
+class transform():
+"""
+class transform
+
+Generic GFFT transformation class. This does nothing... it's just an abstract
+class for others to inherit from. Common attributes and methods that ALL children
+will have are listed here. Method definitions listed below indicate which args are
+required or not.
+
+Common attributes: 
+    ndim - number of dimensions
+    in_center - indicates whether the input array is centered on the reference 
+        value (True) or the reference value is the zero index (False). It is a 
+        list of booleans of length ndim. A scalar can also be given and it applies
+        to all dimensions. [False]
+    out_center - same as the incenter attribute, but applies to the output of the
+        transform.
+    in_ref - an ndim length array or list of floats indicating the reference 
+        value for each axis. This is used for applying the appropriate phase 
+        shifts. If a scalar, the same reference applies to all axes. [0.]
+    out_ref - same as inref but it applies to the output axis. [0]
+    ft_type - An ndim length list of characters indicating which type of Fourier 
+        transform should be performed along each axis. Valid entries are 'f', 
+        'i', or 'n' for fourier, inverse fourier, or none respectively. If none, 
+        no transformation is performed along the axis.
+
+Common methods:
+    run - The function that actually applies the transformation. Takes a data 
+        array as input. **Must be implemented by all children.**
+    get_inverse_transform - Returns an instance of the class that will do the
+        inverse transformation that is defined here. **Must be implemented by all
+        children.**
+    __init__ - Initialize the transformation, defining the attributes. **Must be 
+        implemented by all children.**
+    _check_data - Checks whether the input data superficially adheres to the 
+        transform as it has been initialized. Takes a data array as input. **Must 
+        be implemented by all children.**
+    _fourier - the part common to all transforms that performs the Fourier trans-
+        formations and any shifts that are necessary. A default implementation is 
+        provided in this class that can be called by its children.  
+"""    
+    # Common attributes #########################   
+    ndim = 0
+    inzerocenter = None
+    outzerocenter = None
+    inref = None
+    outref = None
+    inaxis = None
+    outaxis = None
+        
+    # Common methods ############################
+    def __init__(self):
+        """
+        Generic transformation class init. **Must be implemented by all 
+        children.**
+        
+        Args:
+            **May vary between child classes.**
+        Returns:
+            Nothing
+        """
+        print "Must overwrite the transform class init function!"
+        pass
+    
+    def run(self,data):
+        """
+        Generic transformation class run method. **Must be implemented by all 
+        children.**
+        
+        Args: 
+            data - an ndarray of data to be transformed. If defined on an
+                irregular space, this is a 1D data array regardless of the 
+                problem dimension. If defined on a regular space, this is an
+                ndim numpy array. 
+        
+        Returns: 
+            result - an ndim array that is the transform of the input data.
+        """
+        print "Must overwrite the transform class run function!"
+        pass
+    
+    def get_inverse_transform(self):
+        """
+        Generic transform class get_inverse_transform method. **Must be 
+        implemented by all children.**
+        
+        Args:
+            None
+        
+        Returns:
+            An instance of a derivative of the transform class that performs the
+                inverse transformation of the caller class.
+        """
+        print "Must overwrite the transform class get_inverse_transform function!"
+        pass
+    
+    def _check_data(self, data):
+        """
+        Generic transform class _check_input method. **Must be implemented by all 
+        children.**
+        
+        Args: 
+            data - The data array to check against the attributes of the class 
+                instance
+        Returns:
+            Boolean value indicating whether the data is OK.
+        """
+        print "Must overwrite the transform class _check_data function!"
+        pass
+    
+    def _fourier(self, data):
+        """
+        The global fourier method that handles all regularly gridded fourier (and
+        inverse fourier) transformations and any required phase shifting.
+        
+        Args:
+            data - The *regularly gridded* data array to transform and shift.
+        
+        Returns: 
+            A regularly gridded transform of the data array.
+        """
+        
+        # do pre-shifting:
+        
+        # do ffts
+        
+        # do iffts
+        
+        # do post-shifting
+        
+        pass
+        
+        
+
 
 def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
     out_zero_center=True, enforce_hermitian_symmetry=False, W=6, alpha=1.5,\
