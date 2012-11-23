@@ -35,55 +35,83 @@ import gridding
 
 VERSION = '0.5.0'
 
+FTT_FFT = 'f'
+FTT_IFFT = 'i'
+FTT_NONE = 'n'
+FFT = -1
+IFFT = 1
+NONE = 0
+FT_TYPES = {FTT_FFT: FFT, FTT_IFFT: IFFT, FTT_NONE: NONE}
+INV_FT_TYPES = {v:k for k, v in FT_TYPES.items()}
+ii = complex(0,1)
+
 class transform():
-"""
-class transform
-
-Generic GFFT transformation class. This does nothing... it's just an abstract
-class for others to inherit from. Common attributes and methods that ALL children
-will have are listed here. Method definitions listed below indicate which args are
-required or not.
-
-Common attributes: 
-    ndim - number of dimensions
-    in_center - indicates whether the input array is centered on the reference 
-        value (True) or the reference value is the zero index (False). It is a 
-        list of booleans of length ndim. A scalar can also be given and it applies
-        to all dimensions. [False]
-    out_center - same as the incenter attribute, but applies to the output of the
-        transform.
-    in_ref - an ndim length array or list of floats indicating the reference 
-        value for each axis. This is used for applying the appropriate phase 
-        shifts. If a scalar, the same reference applies to all axes. [0.]
-    out_ref - same as inref but it applies to the output axis. [0]
-    ft_type - An ndim length list of characters indicating which type of Fourier 
-        transform should be performed along each axis. Valid entries are 'f', 
-        'i', or 'n' for fourier, inverse fourier, or none respectively. If none, 
-        no transformation is performed along the axis.
-
-Common methods:
-    run - The function that actually applies the transformation. Takes a data 
-        array as input. **Must be implemented by all children.**
-    get_inverse_transform - Returns an instance of the class that will do the
-        inverse transformation that is defined here. **Must be implemented by all
-        children.**
-    __init__ - Initialize the transformation, defining the attributes. **Must be 
-        implemented by all children.**
-    _check_data - Checks whether the input data superficially adheres to the 
-        transform as it has been initialized. Takes a data array as input. **Must 
-        be implemented by all children.**
-    _fourier - the part common to all transforms that performs the Fourier trans-
-        formations and any shifts that are necessary. A default implementation is 
-        provided in this class that can be called by its children.  
-"""    
+    """
+    class transform
+    
+    Generic GFFT transformation class. This does nothing... it's just an abstract
+    class for others to inherit from. Common attributes and methods that ALL 
+    children will have are listed here. Method definitions listed below indicate 
+    which args are required or not.
+    
+    Common attributes: 
+        ndim - number of dimensions
+        in_center - indicates whether the input array is centered on the reference 
+            value (True) or the reference value is the zero index (False). It is a 
+            list of booleans of length ndim. A scalar can also be given and it 
+            applies to all dimensions. [False]
+        out_center - same as the incenter attribute, but applies to the output of
+            the transform.
+        in_ref - an ndim length array or list of floats indicating the reference 
+            value for each axis. This is used for applying the appropriate phase 
+            shifts. If a scalar, the same reference applies to all axes. [0.]
+        out_ref - same as inref but it applies to the output axis. [0]
+        ft_type - An ndim length list of characters indicating which type of  
+            Fourier transform should be performed along each axis. Valid entries 
+            are 'f', 'i', or 'n' for fourier, inverse fourier, or none, 
+            respectively. If none, no transformation is performed along the axis.
+    
+    Common methods:
+        run - The function that actually applies the transformation. Takes a data 
+            array as input. **Must be implemented by all children.**
+        get_inverse_transform - Returns an instance of the class that will do the
+            inverse transformation that is defined here. **Must be implemented by
+            all children.**
+        __init__ - Initialize the transformation, defining the attributes. **Must 
+            be implemented by all children.**
+        _check_data - Checks whether the input data superficially adheres to the 
+            transform as it has been initialized. Takes a data array as input. 
+            **Must be implemented by all children.**
+        _fourier - the part common to all transforms that performs the Fourier 
+            transformations and any shifts that are necessary. A default 
+            implementation is provided in this class that can be called by its 
+            children, so this does not need to be (and shouldn't be) overwritten.
+    """    
+    
     # Common attributes #########################   
     ndim = 0
-    inzerocenter = None
-    outzerocenter = None
-    inref = None
-    outref = None
-    inaxis = None
-    outaxis = None
+
+    in_ref = None
+    out_ref = None
+    
+    do_fft = False
+    do_ifft = False
+    fftaxes = None
+    ifftaxes = None
+    ft_type = None
+
+    do_pre_fftshift = False
+    pre_fftshift_axes = None
+    do_pre_ifftshift = False
+    pre_ifftshift_axes = None
+    
+    do_post_fftshift = False
+    post_fftshift_axes = None
+    do_post_ifftshift = False
+    post_ifftshift_axes = None
+    
+    in_axes = None
+    out_axes = None
         
     # Common methods ############################
     def __init__(self):
@@ -131,6 +159,22 @@ Common methods:
         print "Must overwrite the transform class get_inverse_transform function!"
         pass
     
+    def set_ft_type(self, ft_type):
+        """
+        """
+        [self.do_fft, self.fftaxes, self.do_ifft, self.ifftaxes, \
+                self.ft_type] = self._parse_ft_type(ft_type)
+    
+    def get_ft_type(self):
+        """
+        """
+        temp_ft_type = []
+        for i in range(self.ndim):
+            temp_ft_type.append(INV_FT_TYPES[self.ft_type[i]])
+            
+            
+        return temp_ft_type
+    
     def _check_data(self, data):
         """
         Generic transform class _check_input method. **Must be implemented by all 
@@ -156,18 +200,413 @@ Common methods:
         Returns: 
             A regularly gridded transform of the data array.
         """
+        if self.do_pre_fftshift:
+            data2 = np.fft.fftshift(data, axes=self.pre_fftshift_axes)
+        else: 
+            data2 = data.copy()
         
-        # do pre-shifting:
+        if self.do_pre_ifftshift:
+            data2 = np.fft.ifftshift(data2, axes=self.pre_ifftshift_axes)
         
-        # do ffts
+        # TODO: pre phase shift if necessary
         
-        # do iffts
+        if self.do_fft:
+            out = np.fft.fftn(data2, axes=self.fftaxes)
+        else:
+            out = data2.copy()
         
-        # do post-shifting
+        if self.do_ifft:
+            out = np.fft.ifftn(out, axes=self.ifftaxes)
+            
+         
+        if self.do_post_fftshift:
+            out = np.fft.fftshift(out, axes=self.post_fftshift_axes)
         
+        if self.do_post_ifftshift:
+            out = np.fft.ifftshift(out, axes=self.post_ifftshift_axes)
+            
+        # TODO: post phase shift if necessary
+        
+        return out
+    
+    
+    def _parse_ft_type_arg(self, ft_type):
+        """
+        An init check routine for the ft_type argument. Initialize ndim first!
+        
+        Args:
+            ft_type - a valid ft_type argument.
+        
+        Returns: 
+            A properly formatted ft_type attribute.
+        """
+        
+        # flags to determine whether I need to use fftn and/or ifftn
+        do_fft = False
+        do_ifft = False
+        # if you give an empty list to fftn in the axes position, nothing happens
+        fftaxes = []
+        ifftaxes = []
+        
+        new_ft_type = []
+        
+        if type(ft_type) == str:
+            if ft_type.lower() == FTT_FFT:
+                do_fft = True
+                fftaxes = None # Does FFT on all axes
+            elif ft_type.lower() == FTT_IFFT:
+                do_ifft = True
+                ifftaxes = None # Does IFFT on all axes
+            
+            for i in range(self.ndim):
+                new_ft_type.append(FT_TYPES[ft_type])
+                
+        elif type(ft_type) == list:
+            if len(ft_type) != self.ndim:
+                raise Exception('ft_type is a list with invalid length')
+            
+            for i in range(len(ft_type)):
+                if ft_type[i].lower() == FTT_FFT:
+                    do_fft = True
+                    fftaxes += [i]
+                elif ft_type[i].lower() == FTT_IFFT:
+                    do_ifft = True
+                    ifftaxes += [i]
+                
+                new_ft_type.append(FT_TYPES[ft_type[i]])
+                    
+        return do_fft, fftaxes, do_ifft, ifftaxes, new_ft_type
+        
+    def _validate_iterrable_types(self, l, t):
+        """
+        Used to check whether the types of the items within the list or tuple l 
+        are of the type t. Returns True if all items are of type t, False 
+        otherwise.
+        """
+        
+        is_valid = True
+        
+        for i in range(len(l)):
+            if type(l[i]) != t:
+                is_valid = False
+                
+        return is_valid
+    
+    def _parse_center_arg(self, center_arg):
+        """
+        """
+        
+        do_fftshift = False
+        do_ifftshift = False
+        
+        fftshift_axes = []
+        ifftshift_axes = []
+        
+        if type(center_arg) == bool:
+            
+            for i in range(self.ndim):
+                if center_arg and self.ft_type[i] == FFT:
+                    do_fftshift = True
+                    fftshift_axes.append(i)
+                elif self.ft_type[i] == IFFT and center_arg:
+                    ifftshift_axes.append(i)
+                    do_ifftshift = True
+                
+        elif type(center_arg) == list:
+            if len(center_arg) != self.ndim:
+                raise Exception('center_arg is a list with invalid length')
+                
+            for i in range(self.ndim):
+                if center_arg[i] and self.ft_type[i] == FFT:
+                    do_fftshift = True
+                    fftshift_axes.append(i)
+                elif center_arg[i] and self.ft_type[i] == IFFT:
+                    do_ifftshift = True
+                    ifftshift_axes.append(i)
+        
+        return do_fftshift, fftshift_axes, do_ifftshift, ifftshift_axes
+    
+    def _parse_ref_arg(self, ref):
+        """
+        """
+        new_ref = list()
+        
+        if np.isscalar(ref):
+            # all axes use the same ft type
+            for indx in range(self.ndim):
+                new_ref.append(ref)
+                        
+        else:
+            if len(ref) != self.ndim:
+                raise TypeError("Invalid axis reference argument!")
+            new_ref = ref
+        
+        return new_ref
+
+
+class rrtransform(transform):
+    """
+    A GFFT regular-to-regular transform. This effectively just runs the usual 
+    numpy fftn routine, but it will handle mixtures of FFTs and IFFTs along
+    different axes for you, as well as any phase shifts (arbitrary or trivial
+    fftshift type shifts).
+    """
+    
+    def __init__(self, ndim, ft_type='f', in_center = False, out_center = False, \
+        in_ref = 0., out_ref = 0., in_axes=None, out_axes=None):
+            """
+            initializes the rrtransform class.
+            
+            Args: 
+                ndim - number of dimensions of the array to be transformed.
+                ft_type - An ndim length list of characters indicating which type
+                    of Fourier transform should be performed along each axis. 
+                    Valid entries are 'f', 'i', or 'n' for fourier, inverse 
+                    fourier, or none respectively. If none, no transformation is 
+                    performed along the axis.
+                in_center - indicates whether the input array is centered on 
+                    the reference value (True) or the reference value is the zero 
+                    index (False). It is a list of booleans of length ndim. 
+                    A scalar can also be given and it applies to all dimensions. 
+                    [False]
+                out_center - Same as in_zero_center but for the output array.
+                in_ref - an ndim length array or list of floats indicating the 
+                    reference value for each axis. This is used for applying the 
+                    appropriate phase shifts. If a scalar, the same reference 
+                    applies to all axes. [0.]
+                out_ref - same as inref but it applies to the output axis. [0]
+                    
+            Returns: 
+                Nothing
+            """
+            
+            self.ndim = ndim
+            self.set_ft_type(ft_type)
+
+            [self.do_pre_fftshift, self.pre_fftshift_axes, self.do_pre_ifftshift,\
+                self.pre_ifftshift_axes] = self._parse_center_arg(in_center)
+            [self.do_post_fftshift, self.post_fftshift_axes, \
+                self.do_post_ifftshift, self.post_ifftshift_axes] \
+                = self._parse_center_arg(in_center)
+            
+            self.in_ref = self._parse_ref_arg(in_ref)
+            self.out_ref = self._parse_ref_arg(out_ref)
+            
+            # TODO: Fill these in with something standard using a parse_axes
+            # routine.
+            self.in_axes = in_axes
+            self.out_axes = out_axes
+    
+    def run(self, data):
+        """
+        Performs the regular to regular transformation.
+        
+        Args: 
+            data - an ndim numpy array to be transformed. 
+                
+        Returns: 
+            The requested transform of the input data.
+        """
+        
+        if not self._check_data(data):
+            raise Exception("Invalid data for this transformation!")
+        
+        return self._fourier(data)
+    
+    def get_inverse_transform(self):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        # TODO: Fill this in.
         pass
+    
+    def _check_data(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        if type(data) != np.ndarray:
+            raise Exception("Data must be a numpy array.")
+            
+        if data.ndim != self.ndim:
+            raise Exception("Data has incorrect number of dimensions!")
         
-        
+        return True
+
+
+
+
+
+class irtransform(transform):
+    """
+    Desc.
+    
+    Attributes:
+    
+    Methods:
+    
+    """
+
+    def __init__(self, in_ax, out_ax, in_center = False, out_center = False,\
+        in_ref = 0., out_ref = 0.):
+            """
+            Desc.
+            Args:
+                
+            Returns:
+                
+            """
+            pass
+    
+    def run(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    def get_inverse_transform(self):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    def _check_data(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    
+    
+
+    
+class ritransform(transform):
+    """
+    Desc.
+    
+    Attributes:
+    
+    Methods:
+    
+    """
+
+    def __init__(self, in_ax, out_ax, in_center = False, out_center = False,\
+        in_ref = 0., out_ref = 0.):
+            """
+            Desc.
+            Args:
+                
+            Returns:
+                
+            """
+            pass
+    
+    def run(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    def get_inverse_transform(self):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    def _check_data(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+
+
+
+
+class iitransform(transform):
+    """
+    Desc.
+    
+    Attributes:
+    
+    Methods:
+    
+    """
+
+    def __init__(self, in_ax, out_ax, in_center = False, out_center = False,\
+        in_ref = 0., out_ref = 0.):
+            """
+            Desc.
+            Args:
+                
+            Returns:
+                
+            """
+            pass
+    
+    def run(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    def get_inverse_transform(self):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    def _check_data(self, data):
+        """
+        Desc.
+        Args:
+            
+        Returns:
+            
+        """
+        pass
+    
+    
+    
+    
 
 
 def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
