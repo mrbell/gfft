@@ -90,7 +90,7 @@ class transform():
     
     # Common attributes #########################   
     ndim = 0
-
+    
     in_ref = None
     out_ref = None
     
@@ -200,6 +200,8 @@ class transform():
         Returns: 
             A regularly gridded transform of the data array.
         """
+        
+        # Get the reference pixel in the zeroth entry of the data array
         if self.do_pre_fftshift:
             data2 = np.fft.fftshift(data, axes=self.pre_fftshift_axes)
         else: 
@@ -208,7 +210,14 @@ class transform():
         if self.do_pre_ifftshift:
             data2 = np.fft.ifftshift(data2, axes=self.pre_ifftshift_axes)
         
-        # TODO: pre phase shift if necessary
+        for i in range(self.ndim):
+            if self.out_ref[i] != 0. and self.ft_type[i] != NONE:
+                shift = np.exp(self.ft_type[i]*np.pi*ii\
+                    *self.out_ref[i]*self.in_axes[i])
+                # I think this works...
+                idx_obj = [None]*self.ndim
+                idx_obj[i] = slice(None) 
+                data2 = data2*shift[idx_obj]          
         
         if self.do_fft:
             out = np.fft.fftn(data2, axes=self.fftaxes)
@@ -218,14 +227,20 @@ class transform():
         if self.do_ifft:
             out = np.fft.ifftn(out, axes=self.ifftaxes)
             
+        for i in range(self.ndim):
+            if self.in_ref[i] != 0. and self.ft_type[i] != NONE:
+                shift = np.exp(self.ft_type[i]*np.pi*ii\
+                    *self.in_ref[i]*(self.out_axes[i]+self.out_ref[i]))
+                # I think this works...
+                idx_obj = [None]*self.ndim
+                idx_obj[i] = slice(None) 
+                out = out*shift[idx_obj]
          
         if self.do_post_fftshift:
             out = np.fft.fftshift(out, axes=self.post_fftshift_axes)
         
         if self.do_post_ifftshift:
             out = np.fft.ifftshift(out, axes=self.post_ifftshift_axes)
-            
-        # TODO: post phase shift if necessary
         
         return out
     
@@ -342,6 +357,37 @@ class transform():
             new_ref = ref
         
         return new_ref
+        
+    def _parse_regular_axes(self, axes):
+        """
+        Pass a list of tuples that define the gridded coordinate axes.
+        The list contains one axis definition per dimsion of the data. If a tuple, 
+        it contains (dx, nx) where dx is the pixel distance, and nx is the 
+        number of pixels. Alternatively, a single tuple can be provided and it
+        will apply to all coordinate axes. Can be 'None' if the reference pixel
+        is zero and therefore no special phase shifting is required.
+        """
+        newaxes = list()
+        if axes is None:
+            for i in range(self.ndim):
+                newaxes.append(None)
+        elif type(axes) == tuple:
+            for i in range(self.ndim):
+                newaxes.append(np.arange(axes[1])*np.arange(axes[0]))
+        elif type(axes) == list:
+            if len(axes) != self.ndim:
+                raise Exception("Incorrect number of axes has been provided.")
+            else:
+                for i in range(self.ndim):
+                    if axes[i] is None:
+                        newaxes.append(None)
+                    elif type(axes[i]) == tuple:
+                        newaxes.append(np.arange(axes[i][1])\
+                            *np.arange(axes[i][0]))
+                    else:
+                        raise Exception("Invalid axis definition.")
+        else:
+            raise Exception("Invalid axis definition")
 
 
 class rrtransform(transform):
@@ -382,20 +428,21 @@ class rrtransform(transform):
             
             self.ndim = ndim
             self.set_ft_type(ft_type)
+            
+            self.in_center = in_center
+            self.out_center = out_center
 
             [self.do_pre_fftshift, self.pre_fftshift_axes, self.do_pre_ifftshift,\
                 self.pre_ifftshift_axes] = self._parse_center_arg(in_center)
             [self.do_post_fftshift, self.post_fftshift_axes, \
                 self.do_post_ifftshift, self.post_ifftshift_axes] \
-                = self._parse_center_arg(in_center)
+                = self._parse_center_arg(out_center)
             
             self.in_ref = self._parse_ref_arg(in_ref)
             self.out_ref = self._parse_ref_arg(out_ref)
             
-            # TODO: Fill these in with something standard using a parse_axes
-            # routine.
-            self.in_axes = in_axes
-            self.out_axes = out_axes
+            self.in_axes = self._parse_regular_axes(in_axes)
+            self.out_axes = self._parse_regular_axes(out_axes)
     
     def run(self, data):
         """
@@ -421,8 +468,19 @@ class rrtransform(transform):
         Returns:
             
         """
-        # TODO: Fill this in.
-        pass
+        ft_type = []
+        for i in range(self.ndim):
+            if self.ft_type[i] == NONE:
+                ft_type.append(FTT_NONE)
+            elif self.ft_type[i] == FFT:
+                ft_type.append(FTT_IFFT)
+            else:
+                ft_type.append(FTT_FFT)
+                
+        it = rrtransform(self.ndim, ft_type, self.out_center, self.in_center, \
+            self.out_ref, self.in_ref, self.out_axes, self.in_axes)
+        
+        return it
     
     def _check_data(self, data):
         """
