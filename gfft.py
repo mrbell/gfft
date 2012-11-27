@@ -87,6 +87,7 @@ class transform():
             implementation is provided in this class that can be called by its 
             children, so this does not need to be (and shouldn't be) overwritten.
     """    
+    # TODO: Update docs
     
     # Common attributes #########################   
     ndim = 0
@@ -163,7 +164,7 @@ class transform():
         """
         """
         [self.do_fft, self.fftaxes, self.do_ifft, self.ifftaxes, \
-                self.ft_type] = self._parse_ft_type(ft_type)
+                self.ft_type] = self._parse_ft_type_arg(ft_type)
     
     def get_ft_type(self):
         """
@@ -274,7 +275,7 @@ class transform():
                 ifftaxes = None # Does IFFT on all axes
             
             for i in range(self.ndim):
-                new_ft_type.append(FT_TYPES[ft_type])
+                new_ft_type.append(FT_TYPES[ft_type.lower()])
                 
         elif type(ft_type) == list:
             if len(ft_type) != self.ndim:
@@ -288,7 +289,7 @@ class transform():
                     do_ifft = True
                     ifftaxes += [i]
                 
-                new_ft_type.append(FT_TYPES[ft_type[i]])
+                new_ft_type.append(FT_TYPES[ft_type[i].lower()])
                     
         return do_fft, fftaxes, do_ifft, ifftaxes, new_ft_type
         
@@ -373,7 +374,7 @@ class transform():
                 newaxes.append(None)
         elif type(axes) == tuple:
             for i in range(self.ndim):
-                newaxes.append(np.arange(axes[1])*np.arange(axes[0]))
+                newaxes.append(np.arange(axes[1])*axes[0])
         elif type(axes) == list:
             if len(axes) != self.ndim:
                 raise Exception("Incorrect number of axes has been provided.")
@@ -383,11 +384,19 @@ class transform():
                         newaxes.append(None)
                     elif type(axes[i]) == tuple:
                         newaxes.append(np.arange(axes[i][1])\
-                            *np.arange(axes[i][0]))
+                            *axes[i][0])
+                    elif type(axes[i]) == np.ndarray:
+                        newaxes.append(axes[i])
                     else:
                         raise Exception("Invalid axis definition.")
         else:
             raise Exception("Invalid axis definition")
+        
+        return newaxes
+    
+    def __call__(self, data):
+        
+        return self.run(data)
 
 
 class rrtransform(transform):
@@ -443,6 +452,18 @@ class rrtransform(transform):
             
             self.in_axes = self._parse_regular_axes(in_axes)
             self.out_axes = self._parse_regular_axes(out_axes)
+            
+            for i in range(self.ndim):
+                if self.in_ref[i] != 0. and self.out_axes[i] is None:
+                    raise Exception("Must define out_axes if the in_ref "+\
+                        "value is non-zero!")
+                    
+                if self.out_ref[i] != 0. and self.in_axes[i] is None:
+                    raise Exception("Must define in_axes if the out_ref "+\
+                        "value is non-zero!")
+            
+            print self.in_axes
+            print self.out_axes
     
     def run(self, data):
         """
