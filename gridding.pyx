@@ -64,7 +64,7 @@ def grid_3d(np.ndarray[DTYPE_t, ndim=1] u, np.ndarray[DTYPE_t, ndim=1] v,
         cdef int nvis = u.shape[0]
 
         cdef np.ndarray[CTYPE_t, ndim=3, mode='c'] gv = \
-            np.zeros((Nu, Nv, Nw), dtype=CTYPE) #output array
+            np.zeros((Nu, Nv, Nw), dtype=CTYPE)  #output array
 
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] ug = \
             np.zeros(nvis * W3, dtype=DTYPE)

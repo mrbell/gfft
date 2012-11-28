@@ -6,6 +6,8 @@ import numpy
 include_gsl_dir = "/usr/include/gsl/"
 lib_gsl_dir = "/usr/lib64/"
 
+VERSION = '0.5.0'
+
 # python setup.py build_ext --inplace
 
 # Note that I need to include gslcblas otherwise I get import errors!!!
@@ -15,7 +17,7 @@ ext = Extension("gfft.gridding", ["gridding.pyx"],
                 libraries=["gsl", "gslcblas"])
 
 setup(name="gfft",
-      version="1.0",
+      version=VERSION,
       description="generalized FFT function",
       author="Michael Bell",
       author_email='mrbell@mpa-garching.mpg.de',

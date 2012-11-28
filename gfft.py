@@ -48,7 +48,7 @@ ii = complex(0, 1)
 
 class transform():
     """
-    class transform
+    transform
 
     Generic GFFT transformation class. This does nothing... it's just an
     abstract class for others to inherit from. Common attributes and methods
@@ -119,18 +119,48 @@ class transform():
     out_axes = None
 
     # Common methods ############################
-    def __init__(self):
+    def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
+                 in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
-        Generic transformation class init. **Must be implemented by all
-        children.**
+        initializes the rrtransform class.
 
         Args:
-            **May vary between child classes.**
+            ndim - number of dimensions of the array to be transformed.
+            ft_type - An ndim length list of characters indicating which type
+                of Fourier transform should be performed along each axis.
+                Valid entries are 'f', 'i', or 'n' for fourier, inverse
+                fourier, or none respectively. If none, no transformation is
+                performed along the axis.
+            in_center - indicates whether the input array is centered on
+                the reference value (True) or the reference value is the zero
+                index (False). It is a list of booleans of length ndim.
+                A scalar can also be given and it applies to all dimensions.
+                [False]
+            out_center - Same as in_zero_center but for the output array.
+            in_ref - an ndim length array or list of floats indicating the
+                reference value for each axis. This is used for applying the
+                appropriate phase shifts. If a scalar, the same reference
+                applies to all axes. [0.]
+            out_ref - same as inref but it applies to the output axis. [0]
+
         Returns:
             Nothing
         """
-        print "Must overwrite the transform class init function!"
-        pass
+
+        self.ndim = ndim
+        self.set_ft_type(ft_type)
+
+        self.in_center = in_center
+        self.out_center = out_center
+
+        [self.do_pre_fftshift, self.pre_fftshift_axes, self.do_pre_ifftshift,
+            self.pre_ifftshift_axes] = self._parse_center_arg(in_center)
+        [self.do_post_fftshift, self.post_fftshift_axes,
+            self.do_post_ifftshift, self.post_ifftshift_axes] \
+            = self._parse_center_arg(out_center)
+
+        self.in_ref = self._parse_ref_arg(in_ref)
+        self.out_ref = self._parse_ref_arg(out_ref)
 
     def run(self, data):
         """
@@ -412,9 +442,8 @@ class rrtransform(transform):
     fftshift type shifts).
     """
 
-    def __init__(self, ndim, ft_type='f', in_center=False,
-                 out_center=False, in_ref=0., out_ref=0., in_axes=None,
-                 out_axes=None):
+    def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
+                 in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
         initializes the rrtransform class.
 
@@ -467,9 +496,6 @@ class rrtransform(transform):
             if self.out_ref[i] != 0. and self.in_axes[i] is None:
                 raise Exception("Must define in_axes if the out_ref " +
                                 "value is non-zero!")
-
-        print self.in_axes
-        print self.out_axes
 
     def run(self, data):
         """
@@ -537,16 +563,60 @@ class irtransform(transform):
 
     """
 
-    def __init__(self, in_ax, out_ax, in_center=False, out_center=False,
-                 in_ref=0., out_ref=0.):
+    def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
+                 in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
-        Desc.
+        initializes the rrtransform class.
+
         Args:
+            ndim - number of dimensions of the array to be transformed.
+            ft_type - An ndim length list of characters indicating which type
+                of Fourier transform should be performed along each axis.
+                Valid entries are 'f', 'i', or 'n' for fourier, inverse
+                fourier, or none respectively. If none, no transformation is
+                performed along the axis.
+            in_center - indicates whether the input array is centered on
+                the reference value (True) or the reference value is the zero
+                index (False). It is a list of booleans of length ndim.
+                A scalar can also be given and it applies to all dimensions.
+                [False]
+            out_center - Same as in_zero_center but for the output array.
+            in_ref - an ndim length array or list of floats indicating the
+                reference value for each axis. This is used for applying the
+                appropriate phase shifts. If a scalar, the same reference
+                applies to all axes. [0.]
+            out_ref - same as inref but it applies to the output axis. [0]
 
         Returns:
-
+            Nothing
         """
-        pass
+
+        self.ndim = ndim
+        self.set_ft_type(ft_type)
+
+        self.in_center = in_center
+        self.out_center = out_center
+
+        [self.do_pre_fftshift, self.pre_fftshift_axes, self.do_pre_ifftshift,
+            self.pre_ifftshift_axes] = self._parse_center_arg(in_center)
+        [self.do_post_fftshift, self.post_fftshift_axes,
+            self.do_post_ifftshift, self.post_ifftshift_axes] \
+            = self._parse_center_arg(out_center)
+
+        self.in_ref = self._parse_ref_arg(in_ref)
+        self.out_ref = self._parse_ref_arg(out_ref)
+
+        self.in_axes = self._parse_regular_axes(in_axes)
+        self.out_axes = self._parse_regular_axes(out_axes)
+
+        for i in range(self.ndim):
+            if self.in_ref[i] != 0. and self.out_axes[i] is None:
+                raise Exception("Must define out_axes if the in_ref " +
+                                "value is non-zero!")
+
+            if self.out_ref[i] != 0. and self.in_axes[i] is None:
+                raise Exception("Must define in_axes if the out_ref " +
+                                "value is non-zero!")
 
     def run(self, data):
         """
@@ -684,7 +754,7 @@ class iitransform(transform):
 
 
 ###############################################################################
-# Old code
+# Old code, to be deprecated
 ###############################################################################
 def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True,
          out_zero_center=True, enforce_hermitian_symmetry=False, W=6,
