@@ -39,3 +39,4 @@ nosetests.xml
 .spyderproject
 *~
 *.orig
+*.nja
