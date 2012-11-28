@@ -13,24 +13,23 @@ import sys
 import os
 import datetime
 
-#SRC_FILES = ['gfft.py', 'setup.py']  # Alter for each project...
-SRC_FILES = ['setup.py']  # Alter for each project...
+SRC_FILES = ['gfft.py', 'setup.py']  # Alter for each project...
 
 # These files should exist in ALL projects.
 STANDARD_FILES = ['README.md']
 
 vnum = sys.argv[1]
 
-print vnum
+print "Updating the following files to version " + vnum \
+    + ": " + ', '.join(SRC_FILES + STANDARD_FILES)
 
 for i in range(len(SRC_FILES)):
-    # backup the file before writing over it.
     os.rename(SRC_FILES[i], SRC_FILES[i] + '.bak')
     outf = open(SRC_FILES[i], 'w')
 
     for line in open(SRC_FILES[i] + '.bak'):
-        if "VERSION" in line:
-            outf.write("VERSION = " + vnum + "\n")
+        if "VERSION =" in line:
+            outf.write("VERSION = \'" + vnum + "\'\n")
         else:
             outf.write(line)
 
@@ -38,10 +37,10 @@ for i in range(len(STANDARD_FILES)):
     os.rename(STANDARD_FILES[i], STANDARD_FILES[i] + '.bak')
     outf = open(STANDARD_FILES[i], 'w')
 
-    for line in open(STANDARD_FILES[i]):
+    for line in open(STANDARD_FILES[i] + '.bak'):
         if "*current version:*" in line.lower():
-            outf.write("*Current version: " + vnum + "\n")
+            outf.write("*Current version:* " + vnum + "\n")
         elif "*updated on:*" in line.lower():
-            outf.write("*Updated on:* " + str(datetime.date.today()) + "/n")
+            outf.write("*Updated on:* " + str(datetime.date.today()) + "\n")
         else:
             outf.write(line)

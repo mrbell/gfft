@@ -16,7 +16,7 @@ Features include:
   - Handles phase shifting of data for arbitrary axis definitions whether 
     zero-centered or centered at any other location along the input/output axes.
 
-*Current version:* 0.5.0
+*Current version:* 0.5.1
 *Updated on:* 2012-11-28
 
 For more information, please refer to the [GFFT Wiki](https://github.com/mrbell/gfft/wiki).

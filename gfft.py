@@ -33,7 +33,7 @@ import warnings
 
 import gridding
 
-VERSION = '0.5.0'
+VERSION = '0.5.1'
 
 FTT_FFT = 'f'
 FTT_IFFT = 'i'
@@ -840,8 +840,6 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True,
     out: A numpy array that contains the FT or IFT of inp.
 
     """
-
-    VERSION = "0.2.1"
 
     if verbose:
         print "gfft v. " + VERSION

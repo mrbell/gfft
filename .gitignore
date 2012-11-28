@@ -40,3 +40,4 @@ nosetests.xml
 *~
 *.orig
 *.nja
+*.bak
