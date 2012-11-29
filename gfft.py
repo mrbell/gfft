@@ -44,6 +44,34 @@ NONE = 0
 FT_TYPES = {FTT_FFT: FFT, FTT_IFFT: IFFT, FTT_NONE: NONE}
 INV_FT_TYPES = {v: k for k, v in FT_TYPES.items()}
 ii = complex(0, 1)
+alpha = 1.5
+W = 6
+
+GRID_FUNCS = {1: gridding.gridder1d, 2: gridding.gridder2d,
+              3: gridding.gridder3d}
+DEGRID_FUNCS = {1: gridding.degridder1d, 2: degridding.gridder2d,
+                3: gridding.degridder3d}
+GRIDCORR_FUNCS = {1: gridding.gridcorr1d, 2: degridding.gridcorr2d,
+                3: gridding.gridcorr3d}
+
+
+def get_conjugate_axes(dx, Nx, ratio=1.):
+    """
+    Given dx and Nx, which can be either scalars or lists, defining a grid for
+    a particular axis, returns the conjugate axis grid, optionally accounting
+    for grid oversampling.
+    """
+    if np.isscalar(dx):
+        dk = 1. / dx / Nx / ratio
+        Nk = Nx * ratio
+    else:
+        dk = []
+        Nk = []
+        for i in range(len(dx)):
+            dk.append(1. / dx / Nx / ratio)
+            Nk.append(Nx * ratio)
+
+    return dk, Nk
 
 
 class Transform(object):
@@ -282,6 +310,22 @@ class Transform(object):
 
         return out
 
+    def _parse_hermitianize_arg(self, hermitianize):
+        """
+        """
+        toherm = []
+
+        if type(hermitianize) == bool:
+            for i in range(self.ndim):
+                toherm.append(hermitianize)
+        elif type(hermitianize) == list:
+            if len(hermitianize) != self.ndim:
+                raise Exception("Invalid hermitianize arg!")
+            for i in range(self.ndim):
+                toherm.append(hermitianize[i])
+
+        return toherm
+
     def _parse_ft_type_arg(self, ft_type):
         """
         An init check routine for the ft_type argument. Initialize ndim first!
@@ -459,6 +503,18 @@ class Transform(object):
 
         return self.run(data)
 
+    def _get_mincoord(self, dx, Nx, ref):
+        """
+        """
+        xmin = []
+        for i in range(self.ndim):
+            if self.do_pre_fftshift[i] or self.do_pre_ifftshift[i]:
+                umin.append(ref[i] - dx[i] * Nx[i] * 0.5)
+            else:
+                umin.append(ref[i])
+
+        return xmin
+
 
 class RRTransform(Transform):
     """
@@ -581,7 +637,8 @@ class IRTransform(Transform):
     """
 
     def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
-                 in_center=False, out_center=False, in_ref=0., out_ref=0.):
+                 in_center=False, out_center=False, in_ref=0., out_ref=0.,
+                 hermitianize=False):
         """
         initializes the rrtransform class.
 
@@ -615,9 +672,14 @@ class IRTransform(Transform):
         self.in_axes = self._parse_irregular_axes(in_axes)
         self.out_axes = self._parse_regular_axes(out_axes)
 
+        self.hermitianize = self._parse_hermitianize_arg(hermitianize)
+
         for i in range(self.ndim):
             if self.out_axes[i] is None:
                 raise Exception("Must define out_axes for IRTransform!")
+
+        self.grid_func = GRID_FUNCS[self.ndim]
+        self.gridcorr_func = GRIDCORR_FUNCS[self.ndim]
 
     def run(self, data):
         """
@@ -627,12 +689,50 @@ class IRTransform(Transform):
         Returns:
 
         """
+        if not self._check_data():
+            raise Exception("Invalid data array for this IRTransform!")
 
-        # Grid
-        # pass to Transform._fourier_part
-        # Grid correct & crop
+        [dx, Nx] = self._get_dxNx(self.out_axes)
+        [du, Nu] = get_conjugate_axes(dx, Nx)
 
-        pass
+        umin = self._get_mincoord(du, Nu, self.in_ref)
+        xmin = self._get_mincoord(dx, Nx, self.out_ref)
+
+        gd = self.grid_func(self.in_axes, data, du, Nu, umin,
+                            alpha, W, self.hermitianize)
+
+        out = self._fourier(gd)
+
+        out = self._grid_crop(out)
+
+        out = out / self.gridcorr_func(dx, Nx, xmin, du, W, alpha)
+
+        return out
+
+    def _grid_crop(self, grid):
+        """
+        """
+        s = []
+        for i in range(self.ndim):
+            n = len(self.out_axes[i])
+            if self.do_post_fftshift or self.do_post_ifftshift:
+                s.append(np.slice(0.5 * n * (alpha - 1.),
+                                  0.5 * n * (alpha - 1.) + n))
+            else:
+                s.append(np.slice(n))
+
+        return grid[s]
+
+    def _get_dxNx(self, axlist):
+        """Get a list of du and Nu given a list of axis arrays."""
+        dx = list()
+        Nx = list()
+
+        for i in range(self.ndim):
+            dx = axlist[i][1] - axlist[i][0]
+            Nx = len(axlist[i])
+
+        return dx, Nx
 
     def get_inverse_transform(self):
         """
@@ -643,9 +743,20 @@ class IRTransform(Transform):
 
         """
 
-        # Define the appropriate RITransform and return
+        ft_type = []
+        for i in range(self.ndim):
+            if self.ft_type[i] == NONE:
+                ft_type.append(FTT_NONE)
+            elif self.ft_type[i] == FFT:
+                ft_type.append(FTT_IFFT)
+            else:
+                ft_type.append(FTT_FFT)
 
-        pass
+        it = RITransform(self.ndim, ft_type, self.out_axes, self.in_axes,
+                         self.out_center, self.in_center, self.out_ref,
+                         self.in_ref)
+
+        return it
 
     def _check_data(self, data):
         """
@@ -655,7 +766,13 @@ class IRTransform(Transform):
         Returns:
 
         """
-        pass
+        if type(data) != np.ndarray:
+            raise Exception("Data must be a numpy array.")
+
+        if len(data) != len(self.in_axes[0]):
+            raise Exception("Data array has the incorrect length!")
+
+        return True
 
 
 class RITransform(Transform):
@@ -687,6 +804,9 @@ class RITransform(Transform):
         for i in range(self.ndim):
             if self.in_axes[i] is None:
                 raise Exception("Must define in_axes for RITransform!")
+
+        self.degrid_func = DEGRID_FUNCS[self.ndim]
+        self.gridcorr_func = GRIDCORR_FUNCS[self.ndim]
 
     def run(self, data):
         """

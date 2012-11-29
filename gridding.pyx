@@ -37,6 +37,7 @@ from cpython cimport bool
 
 DTYPE = np.float64
 CTYPE = np.complex128
+ITYPE = int
 ctypedef np.float64_t DTYPE_t
 ctypedef np.complex128_t CTYPE_t
 
@@ -51,142 +52,243 @@ cdef extern from "math.h":
 
 
 ###############################################################################
+# Wrapper functions for new GFFT classes
+###############################################################################
+def gridder3d(list u, np.ndarray[CTYPE_t, ndim=1] vis,
+              list du, list Nu, list umin, double alpha, int W,
+              list hflag):
+    """Just a wrapper for the old grid_3d function with a unified interface"""
+
+    return grid_3d(u[0], u[1], u[2], vis,
+                   du[0], Nu[0], umin[0],
+                   du[1], Nu[1], umin[1],
+                   du[2], Nu[2], umin[2],
+                   alpha, W, hflag[0], hflag[1], hflag[2])
+
+
+def degridder3d(list u, np.ndarray[CTYPE_t, ndim=3] regVis, \
+                list du, list Nu, list umin, double alpha, int W):
+    """
+    Just a wrapper around the old degrid_3d function with a unified interface
+    """
+
+    return degrid_3d(u[0], u[1], u[2], regVis,
+                     du[0], Nu[0], umin[0],
+                     du[1], Nu[1], umin[1],
+                     du[2], Nu[2], umin[2],
+                     alpha, W)
+
+
+def gridcorr3d(list dx, list Nx, list xmin, list du, int W, double alpha):
+    """
+    A thin wrapper around the old get_grid_corr_3d function with a unified
+    interface.
+    """
+    return get_grid_corr_3d(dx[0], Nx[0], xmin[0],
+                            dx[1], Nx[1], xmin[1],
+                            dx[2], Nx[2], xmin[2],
+                            du[0], du[1], du[2], W, alpha)
+
+
+def gridder2d(list u, np.ndarray[CTYPE_t, ndim=1] vis,
+              list du, list Nu, list umin, double alpha, int W,
+              list hflag):
+    """Just a wrapper for the old grid_2d function with a unified interface"""
+
+    return grid_2d(u[0], u[1], vis,
+                   du[0], Nu[0], umin[0],
+                   du[1], Nu[1], umin[1],
+                   alpha, W, hflag[0], hflag[1])
+
+
+def degridder2d(list u, np.ndarray[CTYPE_t, ndim=2] regVis, \
+                list du, list Nu, list umin, double alpha, int W):
+    """
+    Just a wrapper around the old degrid_2d function with a unified interface
+    """
+
+    return degrid_2d(u[0], u[1], regVis,
+                     du[0], Nu[0], umin[0],
+                     du[1], Nu[1], umin[1],
+                     alpha, W)
+
+def gridcorr2d(list dx, list Nx, list xmin, list du, int W, double alpha):
+    """
+    A thin wrapper around the old get_grid_corr_2d function with a unified
+    interface.
+    """
+    return get_grid_corr_2d(dx[0], Nx[0], xmin[0],
+                            dx[1], Nx[1], xmin[1],
+                            du[0], du[1], W, alpha)
+
+
+def gridder1d(list u, np.ndarray[CTYPE_t, ndim=1] vis,
+              list du, list Nu, list umin, double alpha, int W,
+              list hflag):
+    """Just a wrapper for the old grid_1d function with a unified interface"""
+
+    return grid_2d(u[0], vis,
+                   du[0], Nu[0], umin[0],
+                   alpha, W, hflag[0])
+
+
+def degridder1d(list u, np.ndarray[CTYPE_t, ndim=1] regVis, \
+                list du, list Nu, list umin, double alpha, int W):
+    """
+    Just a wrapper around the old degrid_1d function with a unified interface
+    """
+
+    return degrid_1d(u[0], regVis,
+                     du[0], Nu[0], umin[0],
+                     alpha, W)
+
+
+def gridcorr1d(list dx, list Nx, list xmin, list du, int W, double alpha):
+    """
+    A thin wrapper around the old get_grid_corr_1d function with a unified
+    interface.
+    """
+    return get_grid_corr_1d(dx[0], Nx[0], xmin[0],
+                            du[0], W, alpha)
+
+
+###############################################################################
 # 3D functions
 ###############################################################################
-
 def grid_3d(np.ndarray[DTYPE_t, ndim=1] u, np.ndarray[DTYPE_t, ndim=1] v,
             np.ndarray[DTYPE_t, ndim=1] w, np.ndarray[CTYPE_t, ndim=1] vis,
             double du, int Nu, double umin, double dv, int Nv, double vmin,
             double dw, int Nw, double wmin, double alpha, int W,
             bool hflag_u, bool hflag_v, bool hflag_w):
+    """Gridding for 3D data arrays."""
 
-        cdef int W3 = W ** 3
-        cdef int nvis = u.shape[0]
+    cdef int W3 = W ** 3
+    cdef int nvis = u.shape[0]
 
-        cdef np.ndarray[CTYPE_t, ndim=3, mode='c'] gv = \
-            np.zeros((Nu, Nv, Nw), dtype=CTYPE)  #output array
+    cdef np.ndarray[CTYPE_t, ndim=3, mode='c'] gv = \
+        np.zeros((Nu, Nv, Nw), dtype=CTYPE)  #output array
 
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] ug = \
-            np.zeros(nvis * W3, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] vg = \
-            np.zeros(nvis * W3, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] wg = \
-            np.zeros(nvis * W3, dtype=DTYPE)
-        cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] visg = \
-            np.zeros(nvis * W3, dtype=CTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] ug = \
+        np.zeros(nvis * W3, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] vg = \
+        np.zeros(nvis * W3, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] wg = \
+        np.zeros(nvis * W3, dtype=DTYPE)
+    cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] visg = \
+        np.zeros(nvis * W3, dtype=CTYPE)
 
-        # holds the W values after u gridding
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu1 = \
-            np.zeros(W, dtype=DTYPE)
-        cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis1 = \
-            np.zeros(W, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv1 = \
-            np.zeros(W, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw1 = \
-            np.zeros(W, dtype=DTYPE)
-
-
-        # holds the W**2 values after subsequent v gridding
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu2 =\
-            np.zeros(W ** 2, dtype=DTYPE)
-        cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis2 = \
-            np.zeros(W ** 2, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv2 = \
-            np.zeros(W ** 2, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw2 = \
-            np.zeros(W ** 2, dtype=DTYPE)
+    # holds the W values after u gridding
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu1 = \
+        np.zeros(W, dtype=DTYPE)
+    cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis1 = \
+        np.zeros(W, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv1 = \
+        np.zeros(W, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw1 = \
+        np.zeros(W, dtype=DTYPE)
 
 
-        # holds the W**3 values after subsequent w gridding
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu3 = \
-            np.zeros(W3, dtype=DTYPE)
-        cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis3 = \
-            np.zeros(W3, dtype=CTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv3 = \
-            np.zeros(W3, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw3 = \
-            np.zeros(W3, dtype=DTYPE)
+    # holds the W**2 values after subsequent v gridding
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu2 =\
+        np.zeros(W ** 2, dtype=DTYPE)
+    cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis2 = \
+        np.zeros(W ** 2, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv2 = \
+        np.zeros(W ** 2, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw2 = \
+        np.zeros(W ** 2, dtype=DTYPE)
 
 
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] su = \
-            np.zeros(1, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] sv = \
-            np.zeros(1, dtype=DTYPE)
-        cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] sw = \
-            np.zeros(1, dtype=DTYPE)
-        cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] svis = \
-            np.zeros(1, dtype=CTYPE)
-
-        cdef Py_ssize_t i, undx, vndx, wndx
-
-        cdef double beta = get_beta(W, alpha)
-
-        for i in range(nvis):
-
-            # For each visibility point, grid in 3D, one dimension at a time
-            # so each visibility becomes W**3 values located on the grid
-
-            # Grid in u
-            su[0] = u[i]
-            sv[0] = v[i]
-            sw[0] = w[i]
-            svis[0] = vis[i]
-            grid_1d_from_3d(su, svis, du, W, beta, sv, sw, tu1, tvis1,
-                            tv1, tw1)
-
-            # Grid in v
-            grid_1d_from_3d(tv1, tvis1, dv, W, beta, tu1, tw1,
-                            tv2, tvis2, tu2, tw2) # output arrays
-
-            # Grid in l2
-            grid_1d_from_3d(tw2, tvis2, dw, W, beta, tu2, tv2,
-                            tw3, tvis3, tu3, tv3) # output arrays
-
-            ug[i * W3:(i + 1) * W3] = tu3
-            vg[i * W3:(i + 1) * W3] = tv3
-            wg[i * W3:(i + 1) * W3] = tw3
-            visg[i * W3:(i + 1) * W3] = tvis3
+    # holds the W**3 values after subsequent w gridding
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu3 = \
+        np.zeros(W3, dtype=DTYPE)
+    cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis3 = \
+        np.zeros(W3, dtype=CTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv3 = \
+        np.zeros(W3, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw3 = \
+        np.zeros(W3, dtype=DTYPE)
 
 
-        cdef int N = ug.shape[0]
-        cdef double temp = 0
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] su = \
+        np.zeros(1, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] sv = \
+        np.zeros(1, dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] sw = \
+        np.zeros(1, dtype=DTYPE)
+    cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] svis = \
+        np.zeros(1, dtype=CTYPE)
 
-        for i in range(N):
-            # compute the location for the visibility in the visibility cube
-            temp = (ug[i] - umin)/du + 0.5
-            undx = int(temp)
-            temp = (vg[i] - vmin)/dv + 0.5
-            vndx = int(temp)
-            temp = (wg[i] - wmin)/dw + 0.5
-            wndx = int(temp)
+    cdef Py_ssize_t i, undx, vndx, wndx
+
+    cdef double beta = get_beta(W, alpha)
+
+    for i in range(nvis):
+
+        # For each visibility point, grid in 3D, one dimension at a time
+        # so each visibility becomes W**3 values located on the grid
+
+        # Grid in u
+        su[0] = u[i]
+        sv[0] = v[i]
+        sw[0] = w[i]
+        svis[0] = vis[i]
+        grid_1d_from_3d(su, svis, du, W, beta, sv, sw, tu1, tvis1,
+                        tv1, tw1)
+
+        # Grid in v
+        grid_1d_from_3d(tv1, tvis1, dv, W, beta, tu1, tw1,
+                        tv2, tvis2, tu2, tw2) # output arrays
+
+        # Grid in l2
+        grid_1d_from_3d(tw2, tvis2, dw, W, beta, tu2, tv2,
+                        tw3, tvis3, tu3, tv3) # output arrays
+
+        ug[i * W3:(i + 1) * W3] = tu3
+        vg[i * W3:(i + 1) * W3] = tv3
+        wg[i * W3:(i + 1) * W3] = tw3
+        visg[i * W3:(i + 1) * W3] = tvis3
+
+
+    cdef int N = ug.shape[0]
+    cdef double temp = 0
+
+    for i in range(N):
+        # compute the location for the visibility in the visibility cube
+        temp = (ug[i] - umin)/du + 0.5
+        undx = int(temp)
+        temp = (vg[i] - vmin)/dv + 0.5
+        vndx = int(temp)
+        temp = (wg[i] - wmin)/dw + 0.5
+        wndx = int(temp)
+
+        if (undx >= 0 and undx < Nu) and (vndx >= 0 and vndx < Nv)\
+            and (wndx >= 0 and wndx < Nw):
+                gv[undx, vndx, wndx] = gv[undx, vndx, wndx] + visg[i]
+
+
+        # now compute the location for the -u,-v,-l2 visibility, which is
+        # equal to the complex conj of the u,v,l2 visibility if we
+        # assume that each Stokes image in Faraday space is real
+
+        if hflag_u or hflag_v or hflag_w:
+            if hflag_u:
+                temp = (-1. * ug[i] - umin)/du + 0.5
+                undx = int(temp)
+            if hflag_v:
+                temp = (-1. * vg[i] - vmin)/dv + 0.5
+                vndx = int(temp)
+            if hflag_w:
+                temp = (-1. * wg[i] - wmin)/dw + 0.5
+                wndx = int(temp)
+
 
             if (undx >= 0 and undx < Nu) and (vndx >= 0 and vndx < Nv)\
                 and (wndx >= 0 and wndx < Nw):
-                    gv[undx, vndx, wndx] = gv[undx, vndx, wndx] + visg[i]
+                    gv[undx, vndx, wndx] = gv[undx, vndx, wndx] +\
+                        visg[i].conjugate()
 
-
-            # now compute the location for the -u,-v,-l2 visibility, which is
-            # equal to the complex conj of the u,v,l2 visibility if we
-            # assume that each Stokes image in Faraday space is real
-
-            if hflag_u or hflag_v or hflag_w:
-                if hflag_u:
-                    temp = (-1. * ug[i] - umin)/du + 0.5
-                    undx = int(temp)
-                if hflag_v:
-                    temp = (-1. * vg[i] - vmin)/dv + 0.5
-                    vndx = int(temp)
-                if hflag_w:
-                    temp = (-1. * wg[i] - wmin)/dw + 0.5
-                    wndx = int(temp)
-
-
-                if (undx >= 0 and undx < Nu) and (vndx >= 0 and vndx < Nv)\
-                    and (wndx >= 0 and wndx < Nw):
-                        gv[undx, vndx, wndx] = gv[undx, vndx, wndx] +\
-                            visg[i].conjugate()
-
-        return gv
+    return gv
 
 
 def degrid_3d(np.ndarray[DTYPE_t,ndim=1] u, np.ndarray[DTYPE_t,ndim=1] v, \
