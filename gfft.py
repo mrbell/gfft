@@ -46,7 +46,7 @@ INV_FT_TYPES = {v: k for k, v in FT_TYPES.items()}
 ii = complex(0, 1)
 
 
-class transform():
+class Transform(object):
     """
     transform
 
@@ -122,7 +122,9 @@ class transform():
     def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
                  in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
-        initializes the rrtransform class.
+        initializes the rrtransform class. Call this always in the inherited
+        class __init__ files, followed by routines to parse the in_ and
+        out_axes arguments.
 
         Args:
             ndim - number of dimensions of the array to be transformed.
@@ -429,12 +431,36 @@ class transform():
 
         return newaxes
 
+    def _parse_irregular_axes(self, axes):
+        """
+        """
+        newaxes = list()
+        if axes is None:
+            raise Exception("Irregular axes must be given explicitely. " +
+                            "'None' is not an acceptable definition.")
+        elif type(axes) == np.ndarray:
+            for i in range(self.ndim):
+                newaxes.append(axes)
+        elif type(axes) == list:
+            if np.isscalar(axes[0]):
+                # The coordinates have been passed as a list rather than an
+                # array...
+                return self._parse_irregular_axes(np.array(axes))
+            else:
+                for i in range(self.ndim):
+                    # Cast as array in case a list of lists has been passed.
+                    newaxes.append(np.array(axes[i]))
+        else:
+            raise Exception("Invalid irregular axis type!")
+
+        return newaxes
+
     def __call__(self, data):
 
         return self.run(data)
 
 
-class rrtransform(transform):
+class RRTransform(Transform):
     """
     A GFFT regular-to-regular transform. This effectively just runs the usual
     numpy fftn routine, but it will handle mixtures of FFTs and IFFTs along
@@ -470,21 +496,12 @@ class rrtransform(transform):
             Nothing
         """
 
-        self.ndim = ndim
-        self.set_ft_type(ft_type)
+        super(RRTransform, self).__init__(ndim, ft_type, in_axes, out_axes,
+                                          in_center, out_center,
+                                          in_ref, out_ref)
 
-        self.in_center = in_center
-        self.out_center = out_center
-
-        [self.do_pre_fftshift, self.pre_fftshift_axes, self.do_pre_ifftshift,
-            self.pre_ifftshift_axes] = self._parse_center_arg(in_center)
-        [self.do_post_fftshift, self.post_fftshift_axes,
-            self.do_post_ifftshift, self.post_ifftshift_axes] \
-            = self._parse_center_arg(out_center)
-
-        self.in_ref = self._parse_ref_arg(in_ref)
-        self.out_ref = self._parse_ref_arg(out_ref)
-
+        # FIXME: Actually, I just need dx for the axes... nx will come from
+        # the data that is passed to the run method.
         self.in_axes = self._parse_regular_axes(in_axes)
         self.out_axes = self._parse_regular_axes(out_axes)
 
@@ -530,9 +547,9 @@ class rrtransform(transform):
             else:
                 ft_type.append(FTT_FFT)
 
-        it = rrtransform(self.ndim, ft_type, self.out_center, self.in_center,
-                         self.out_ref, self.in_ref, self.out_axes,
-                         self.in_axes)
+        it = RRTransform(self.ndim, ft_type, self.out_axes, self.in_axes,
+                         self.out_center, self.in_center, self.out_ref,
+                         self.in_ref)
 
         return it
 
@@ -553,7 +570,7 @@ class rrtransform(transform):
         return True
 
 
-class irtransform(transform):
+class IRTransform(Transform):
     """
     Desc.
 
@@ -591,32 +608,16 @@ class irtransform(transform):
             Nothing
         """
 
-        self.ndim = ndim
-        self.set_ft_type(ft_type)
+        super(IRTransform, self).__init__(ndim, ft_type, in_axes, out_axes,
+                                          in_center, out_center,
+                                          in_ref, out_ref)
 
-        self.in_center = in_center
-        self.out_center = out_center
-
-        [self.do_pre_fftshift, self.pre_fftshift_axes, self.do_pre_ifftshift,
-            self.pre_ifftshift_axes] = self._parse_center_arg(in_center)
-        [self.do_post_fftshift, self.post_fftshift_axes,
-            self.do_post_ifftshift, self.post_ifftshift_axes] \
-            = self._parse_center_arg(out_center)
-
-        self.in_ref = self._parse_ref_arg(in_ref)
-        self.out_ref = self._parse_ref_arg(out_ref)
-
-        self.in_axes = self._parse_regular_axes(in_axes)
+        self.in_axes = self._parse_irregular_axes(in_axes)
         self.out_axes = self._parse_regular_axes(out_axes)
 
         for i in range(self.ndim):
-            if self.in_ref[i] != 0. and self.out_axes[i] is None:
-                raise Exception("Must define out_axes if the in_ref " +
-                                "value is non-zero!")
-
-            if self.out_ref[i] != 0. and self.in_axes[i] is None:
-                raise Exception("Must define in_axes if the out_ref " +
-                                "value is non-zero!")
+            if self.out_axes[i] is None:
+                raise Exception("Must define out_axes for IRTransform!")
 
     def run(self, data):
         """
@@ -626,6 +627,11 @@ class irtransform(transform):
         Returns:
 
         """
+
+        # Grid
+        # pass to Transform._fourier_part
+        # Grid correct & crop
+
         pass
 
     def get_inverse_transform(self):
@@ -636,6 +642,9 @@ class irtransform(transform):
         Returns:
 
         """
+
+        # Define the appropriate RITransform and return
+
         pass
 
     def _check_data(self, data):
@@ -649,7 +658,7 @@ class irtransform(transform):
         pass
 
 
-class ritransform(transform):
+class RITransform(Transform):
     """
     Desc.
 
@@ -668,7 +677,16 @@ class ritransform(transform):
         Returns:
 
         """
-        pass
+        super(RITransform, self).__init__(ndim, ft_type, in_axes, out_axes,
+                                          in_center, out_center,
+                                          in_ref, out_ref)
+
+        self.in_axes = self._parse_regular_axes(in_axes)
+        self.out_axes = self._parse_iregular_axes(out_axes)
+
+        for i in range(self.ndim):
+            if self.in_axes[i] is None:
+                raise Exception("Must define in_axes for RITransform!")
 
     def run(self, data):
         """
@@ -678,6 +696,9 @@ class ritransform(transform):
         Returns:
 
         """
+        # Grid correct and zero-pad
+        # Pass to Transform._fourier_part()
+        # Degrid
         pass
 
     def get_inverse_transform(self):
@@ -688,6 +709,7 @@ class ritransform(transform):
         Returns:
 
         """
+        # Define the appropriate IRTransform and return
         pass
 
     def _check_data(self, data):
@@ -701,7 +723,7 @@ class ritransform(transform):
         pass
 
 
-class iitransform(transform):
+class IITransform(Transform):
     """
     Desc.
 

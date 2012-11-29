@@ -7,6 +7,8 @@ include the following lines:
     *Updated on:*
 
 To run, pass the version number as the sole argument to this script.
+
+# TODO: Add an option to make a git commit and create a tag with the vers. num.
 """
 
 import sys
