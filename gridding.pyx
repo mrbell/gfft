@@ -101,7 +101,7 @@ def gridder2d(list u, np.ndarray[CTYPE_t, ndim=1] vis,
                    alpha, W, hflag[0], hflag[1])
 
 
-def degridder2d(list u, np.ndarray[CTYPE_t, ndim=2] regVis, \
+def degridder2d(list u, np.ndarray[CTYPE_t, ndim=2] regVis,
                 list du, list Nu, list umin, double alpha, int W):
     """
     Just a wrapper around the old degrid_2d function with a unified interface

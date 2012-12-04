@@ -49,27 +49,27 @@ W = 6
 
 GRID_FUNCS = {1: gridding.gridder1d, 2: gridding.gridder2d,
               3: gridding.gridder3d}
-DEGRID_FUNCS = {1: gridding.degridder1d, 2: degridding.gridder2d,
+DEGRID_FUNCS = {1: gridding.degridder1d, 2: gridding.degridder2d,
                 3: gridding.degridder3d}
-GRIDCORR_FUNCS = {1: gridding.gridcorr1d, 2: degridding.gridcorr2d,
+GRIDCORR_FUNCS = {1: gridding.gridcorr1d, 2: gridding.degridcorr2d,
                 3: gridding.gridcorr3d}
 
 
-def get_conjugate_axes(dx, Nx, ratio=1.):
+def get_conjugate_axes(dx, Nx):
     """
     Given dx and Nx, which can be either scalars or lists, defining a grid for
     a particular axis, returns the conjugate axis grid, optionally accounting
     for grid oversampling.
     """
     if np.isscalar(dx):
-        dk = 1. / dx / Nx / ratio
-        Nk = Nx * ratio
+        dk = 1. / dx / Nx
+        Nk = Nx
     else:
         dk = []
         Nk = []
         for i in range(len(dx)):
-            dk.append(1. / dx / Nx / ratio)
-            Nk.append(Nx * ratio)
+            dk.append(1. / dx / Nx)
+            Nk.append(Nx)
 
     return dk, Nk
 
@@ -693,7 +693,7 @@ class IRTransform(Transform):
             raise Exception("Invalid data array for this IRTransform!")
 
         [dx, Nx] = self._get_dxNx(self.out_axes)
-        [du, Nu] = get_conjugate_axes(dx, Nx)
+        [du, Nu] = get_conjugate_axes(dx, Nx * alpha)
 
         umin = self._get_mincoord(du, Nu, self.in_ref)
         xmin = self._get_mincoord(dx, Nx, self.out_ref)
@@ -816,12 +816,26 @@ class RITransform(Transform):
         Returns:
 
         """
-        # Grid correct and zero-pad
-        # Pass to Transform._fourier_part()
-        # Degrid
-        pass
+        if not self._check_data():
+            raise Exception("Invalid data array for this IRTransform!")
 
-    def get_inverse_transform(self):
+        [dx, Nx] = self._get_dxNx(self.in_axes)
+        [du, Nu] = get_conjugate_axes(dx, Nx * alpha)
+
+        umin = self._get_mincoord(du, Nu, self.in_ref)
+        xmin = self._get_mincoord(dx, Nx, self.out_ref)
+
+        osdata = self._oversize_grid(data /
+                                     self.gridcorr_func(dx, Nx, xmin, du,
+                                                        W, alpha))
+        og = self._fourier(osdata)
+
+        out = self.degrid_func(self.out_axes, og, du, Nu, umin,
+                               alpha, W)
+
+        return out
+
+    def _oversize_grid(self, data):
         """
         Desc.
         Args:
@@ -829,8 +843,48 @@ class RITransform(Transform):
         Returns:
 
         """
-        # Define the appropriate IRTransform and return
-        pass
+        os_shape = tuple()
+        shape = data.shape
+        for i in range(self.ndim):
+            os_shape += (shape[i] * alpha)
+
+        osdata = np.zeros(os_shape, dtype=data.dtype)
+
+        s = []
+        for i in range(self.ndim):
+            n = len(self.in_axes[i])
+            if self.do_pre_fftshift or self.do_pre_ifftshift:
+                s.append(np.slice(0.5 * n * (alpha - 1.),
+                                  0.5 * n * (alpha - 1.) + n))
+            else:
+                s.append(np.slice(n))
+
+        osdata[s] = data
+
+        return osdata
+
+    def get_inverse_transform(self, hermitianize):
+        """
+        Desc.
+        Args:
+
+        Returns:
+
+        """
+        ft_type = []
+        for i in range(self.ndim):
+            if self.ft_type[i] == NONE:
+                ft_type.append(FTT_NONE)
+            elif self.ft_type[i] == FFT:
+                ft_type.append(FTT_IFFT)
+            else:
+                ft_type.append(FTT_FFT)
+
+        it = IRTransform(self.ndim, ft_type, self.out_axes, self.in_axes,
+                         self.out_center, self.in_center, self.out_ref,
+                         self.in_ref, hermitianize)
+
+        return it
 
     def _check_data(self, data):
         """
@@ -840,7 +894,14 @@ class RITransform(Transform):
         Returns:
 
         """
-        pass
+        if type(data) != np.ndarray:
+            raise Exception("Data must be a numpy array.")
+
+        if data.ndim != self.ndim:
+            raise Exception("Data array has the incorrect number of " +
+                            "dimensions!")
+
+        return True
 
 
 class IITransform(Transform):
@@ -853,8 +914,9 @@ class IITransform(Transform):
 
     """
 
-    def __init__(self, in_ax, out_ax, in_center=False, out_center=False,
-                 in_ref=0., out_ref=0.):
+    def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
+                 in_center=False, out_center=False, in_ref=0., out_ref=0.,
+                 hermitianize=False, grid=None):
         """
         Desc.
         Args:
@@ -862,7 +924,23 @@ class IITransform(Transform):
         Returns:
 
         """
-        pass
+        super(IITransform, self).__init__(ndim, ft_type, in_axes, out_axes,
+                                          in_center, out_center,
+                                          in_ref, out_ref)
+
+        self.in_axes = self._parse_iregular_axes(in_axes)
+        self.out_axes = self._parse_iregular_axes(out_axes)
+        # TODO: Figure out how to deal with this situation...
+
+        self.hermitianize = self._parse_hermitianize_arg(hermitianize)
+
+        for i in range(self.ndim):
+            if self.in_axes[i] is None or self.out_axes[i] is None:
+                raise Exception("Must define both in_axes and out_axes " +
+                                "for IITransform!")
+
+        self.degrid_func = DEGRID_FUNCS[self.ndim]
+        self.gridcorr_func = GRIDCORR_FUNCS[self.ndim]
 
     def run(self, data):
         """
