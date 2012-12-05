@@ -1,4 +1,4 @@
-"""  # lint:ok
+"""
 GFFT
 
 This package mainly consists of a single function, gfft, which is a generalized
@@ -57,9 +57,26 @@ GRIDCORR_FUNCS = {1: gridding.gridcorr1d, 2: gridding.degridcorr2d,
 
 def get_conjugate_axes(dx, Nx):
     """
-    Given dx and Nx, which can be either scalars or lists, defining a grid for
-    a particular axis, returns the conjugate axis grid, optionally accounting
-    for grid oversampling.
+    Given dx and Nx which define a grid for a particular axis, returns the
+    conjugate axis grid.
+
+    Parameters
+    ----------
+    dx : {scalar, list}
+        Pixel size for the grid.
+    Nx : {scalar, list}
+        Number of pixels along the axis.
+
+    Returns
+    -------
+    dk : {scalar, list}
+        Pixel size of the conjugate space
+    Nk : {scalar, list}
+        Number of pixels along the axis in the conjugate space
+
+    Note
+    ----
+    If dx, Nx must also be a list. Same for scalars.
     """
     if np.isscalar(dx):
         dk = 1. / dx / Nx
@@ -76,50 +93,33 @@ def get_conjugate_axes(dx, Nx):
 
 class Transform(object):
     """
-    transform
+    Generic GFFT transformation class. This does nothing... it's just the
+    base class for others to inherit from.
 
-    Generic GFFT transformation class. This does nothing... it's just an
-    abstract class for others to inherit from. Common attributes and methods
-    that ALL children will have are listed here. Method definitions listed
-    below indicate which args are required or not.
-
-    Common attributes:
-        ndim - number of dimensions
-        in_center - indicates whether the input array is centered on the
-            reference value (True) or the reference value is the zero index
-            (False). It is a list of booleans of length ndim. A scalar can also
-            be given and it applies to all dimensions. [False]
-        out_center - same as the incenter attribute, but applies to the output
-            of the transform.
-        in_ref - an ndim length array or list of floats indicating the
-            reference value for each axis. This is used for applying the
-            appropriate phase shifts. If a scalar, the same reference applies
-            to all axes. [0.]
-        out_ref - same as inref but it applies to the output axis. [0]
-        ft_type - An ndim length list of characters indicating which type of
-            Fourier transform should be performed along each axis. Valid
-            entries are 'f', 'i', or 'n' for fourier, inverse fourier, or none,
-            respectively. If none, no transformation is performed along the
-            axis.
-
-    Common methods:
-        run - The function that actually applies the transformation. Takes a
-            data array as input. **Must be implemented by all children.**
-        get_inverse_transform - Returns an instance of the class that will do
-            the inverse transformation that is defined here. **Must be
-            implemented by all children.**
-        __init__ - Initialize the transformation, defining the attributes.
-            **Must be implemented by all children.**
-        _check_data - Checks whether the input data superficially adheres to
-            the transform as it has been initialized. Takes a data array as
-            input. **Must be implemented by all children.**
-        _fourier - the part common to all transforms that performs the Fourier
-            transformations and any shifts that are necessary. A default
-            implementation is provided in this class that can be called by its
-            children, so this does not need to be (and shouldn't be)
-            overwritten.
+    Attributes
+    ----------
+    TODO : UPDATE THESE
+    ndim : int
+        number of dimensions
+    in_center :
+        indicates whether the input array is centered on the
+        reference value (True) or the reference value is the zero index
+        (False). It is a list of booleans of length ndim. A scalar can also
+        be given and it applies to all dimensions. [False]
+    out_center : same as the incenter attribute, but applies to the output
+        of the transform.
+    in_ref : an ndim length array or list of floats indicating the
+        reference value for each axis. This is used for applying the
+        appropriate phase shifts. If a scalar, the same reference applies
+        to all axes. [0.]
+    out_ref : same as inref but it applies to the output axis. [0]
+    ft_type : An ndim length list of characters indicating which type of
+        Fourier transform should be performed along each axis. Valid
+        entries are 'f', 'i', or 'n' for fourier, inverse fourier, or none,
+        respectively. If none, no transformation is performed along the
+        axis.
     """
-    # TODO: Update docs
+    # TODO: Update all docs
 
     # Common attributes #########################
     ndim = 0
@@ -150,31 +150,46 @@ class Transform(object):
     def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
                  in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
-        initializes the rrtransform class. Call this always in the inherited
-        class __init__ files, followed by routines to parse the in_ and
-        out_axes arguments.
+        The generic transform class init. This should always be called first
+        in any inherited class __init__ files, followed by routines to parse
+        the in_ and out_axes arguments. Any additional parameters needed by
+        subclasses must be listed after these.
 
-        Args:
-            ndim - number of dimensions of the array to be transformed.
-            ft_type - An ndim length list of characters indicating which type
-                of Fourier transform should be performed along each axis.
-                Valid entries are 'f', 'i', or 'n' for fourier, inverse
-                fourier, or none respectively. If none, no transformation is
-                performed along the axis.
-            in_center - indicates whether the input array is centered on
-                the reference value (True) or the reference value is the zero
-                index (False). It is a list of booleans of length ndim.
-                A scalar can also be given and it applies to all dimensions.
-                [False]
-            out_center - Same as in_zero_center but for the output array.
-            in_ref - an ndim length array or list of floats indicating the
-                reference value for each axis. This is used for applying the
-                appropriate phase shifts. If a scalar, the same reference
-                applies to all axes. [0.]
-            out_ref - same as inref but it applies to the output axis. [0]
+        Parameters
+        ----------
+        ndim : int
+            number of dimensions of the array to be transformed.
+        ft_type : {string, list of strings}, *optional*
+            An ndim length list of characters indicating which type
+            of Fourier transform should be performed along each axis.
+            Valid entries are 'f', 'i', or 'n' for fourier, inverse
+            fourier, or none respectively. If none, no transformation is
+            performed along the axis. If a scalar is given, the same transform
+            is used on all axes. (default: 'f')
+        in_axes : ...
+            Undefined for the generic transform class. Each subclass will have
+            its own definition of in and out axes. (default: None)
+        out_axes : ...
+            Undefined for the generic transform class. Each subclass will have
+            its own definition of in and out axes. (default: None)
+        in_center : {bool, list of bools}, *optional*
+            Indicates whether the input array is centered on
+            the reference value (True) or the reference value is the zero
+            index (False). It is a list of booleans of length ndim.
+            A scalar can also be given and it applies to all dimensions.
+            (default: False)
+        out_center : {bool, list of bools}, *optional*
+            Same as in_zero_center but for the output array.
+        in_ref : {float, list of floats}, *optional*
+            Indicates the reference value for each axis. This is used for
+            applying the appropriate phase shifts. If a scalar, the same
+            reference applies to all axes. (default: 0.)
+        out_ref : {float, list of floats}, *optional*
+            same as inref but it applies to the output axis. (default: 0.)
 
-        Returns:
-            Nothing
+        Returns
+        -------
+        None
         """
 
         self.ndim = ndim
@@ -197,14 +212,18 @@ class Transform(object):
         Generic transformation class run method. **Must be implemented by all
         children.**
 
-        Args:
-            data - an ndarray of data to be transformed. If defined on an
-                irregular space, this is a 1D data array regardless of the
-                problem dimension. If defined on a regular space, this is an
-                ndim numpy array.
+        Parameters
+        ----------
+        data : ndarray
+            an ndarray of data to be transformed. If defined on an
+            irregular space, this is a 1D data array regardless of the
+            problem dimension. If defined on a regular space, this is an
+            ndim numpy array.
 
-        Returns:
-            result - an ndim array that is the transform of the input data.
+        Returns
+        -------
+        result : ndarray
+            an ndim array that is the transform of the input data.
         """
         print "Must overwrite the transform class run function!"
         pass
@@ -425,6 +444,18 @@ class Transform(object):
 
     def _parse_ref_arg(self, ref):
         """
+        Parse the in_ref and out_ref parameters. self.ndim must be set before
+        running this function.
+
+        Parameters
+        ----------
+        ref : {scalar, iterable}
+            The axis reference values
+
+        Returns
+        -------
+        new_ref : list
+            The parsed axis reference values.
         """
         new_ref = list()
 
@@ -436,18 +467,29 @@ class Transform(object):
         else:
             if len(ref) != self.ndim:
                 raise TypeError("Invalid axis reference argument!")
-            new_ref = ref
+            new_ref = list(ref)
 
         return new_ref
 
     def _parse_regular_axes(self, axes):
         """
         Pass a list of tuples that define the gridded coordinate axes.
-        The list contains one axis definition per dimsion of the data. If a
-        tuple, it contains (dx, nx) where dx is the pixel distance, and nx is
+        The list contains one axis definition per dimsion of the data. The
+        tuple contains (dx, nx) where dx is the pixel distance, and nx is
         the number of pixels. Alternatively, a single tuple can be provided and
         it will apply to all coordinate axes. Can be 'None' if the reference
         pixel is zero and therefore no special phase shifting is required.
+
+        Parameters
+        ----------
+        axes : {None, tuple, list}
+            The axis definition.
+
+        Returns
+        -------
+        newaxes : list of ndarrays
+            A list of ndarrays that contain the regular grid coordinates for
+            each axis.
         """
         newaxes = list()
         if axes is None:
@@ -477,6 +519,19 @@ class Transform(object):
 
     def _parse_irregular_axes(self, axes):
         """
+        Parse a set of irregular axis definitions.
+
+        Parameters
+        ----------
+        axes : {ndarray, list of ndarrays}
+            Each ndarray defines a set of irregular coordinates along each
+            axis. If a list, it has length ndim. If a single ndarray, the same
+            axis definition will apply for all dimensions.
+
+        Returns
+        -------
+        newaxes : list of ndarrays
+            The irregular axes.
         """
         newaxes = list()
         if axes is None:
@@ -500,18 +555,43 @@ class Transform(object):
         return newaxes
 
     def __call__(self, data):
+        """
+        Allows one to treat calls to the instance of the class as run function
+        calls.
+        """
 
         return self.run(data)
 
     def _get_mincoord(self, dx, Nx, ref):
         """
+        Returns the minimum coordinate for the axis. If the ref value is in
+        the zeroth indexed pixel, then this will be returned. Otherwise if the
+        ref value is in the axis center, the minimum is calculated and
+        returned.
+
+        Parameters
+        ----------
+        dx : list of floats
+            A list of pixel sizes
+        Nx : list of ints
+            The size of each axis in number of pixels
+        ref : list of floats
+            The reference coordinates for each axis.
+
+        Returns
+        -------
+        xmin : list of floats
+            The minimum coordinates for each axis.
         """
+        # TODO: The inputs to this could probably be smarter, using the class
+        #   attributes that already exist.
+
         xmin = []
         for i in range(self.ndim):
             if self.do_pre_fftshift[i] or self.do_pre_ifftshift[i]:
-                umin.append(ref[i] - dx[i] * Nx[i] * 0.5)
+                xmin.append(ref[i] - dx[i] * Nx[i] * 0.5)
             else:
-                umin.append(ref[i])
+                xmin.append(ref[i])
 
         return xmin
 
@@ -527,29 +607,32 @@ class RRTransform(Transform):
     def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
                  in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
-        initializes the rrtransform class.
+        Initializes the RRTransform class.
 
-        Args:
-            ndim - number of dimensions of the array to be transformed.
-            ft_type - An ndim length list of characters indicating which type
-                of Fourier transform should be performed along each axis.
-                Valid entries are 'f', 'i', or 'n' for fourier, inverse
-                fourier, or none respectively. If none, no transformation is
-                performed along the axis.
-            in_center - indicates whether the input array is centered on
-                the reference value (True) or the reference value is the zero
-                index (False). It is a list of booleans of length ndim.
-                A scalar can also be given and it applies to all dimensions.
-                [False]
-            out_center - Same as in_zero_center but for the output array.
-            in_ref - an ndim length array or list of floats indicating the
-                reference value for each axis. This is used for applying the
-                appropriate phase shifts. If a scalar, the same reference
-                applies to all axes. [0.]
-            out_ref - same as inref but it applies to the output axis. [0]
+        Parameters
+        ----------
+        ndim : number of dimensions of the array to be transformed.
+        ft_type : An ndim length list of characters indicating which type
+            of Fourier transform should be performed along each axis.
+            Valid entries are 'f', 'i', or 'n' for fourier, inverse
+            fourier, or none respectively. If none, no transformation is
+            performed along the axis.
+        in_center :
+            indicates whether the input array is centered on
+            the reference value (True) or the reference value is the zero
+            index (False). It is a list of booleans of length ndim.
+            A scalar can also be given and it applies to all dimensions.
+            [False]
+        out_center - Same as in_zero_center but for the output array.
+        in_ref - an ndim length array or list of floats indicating the
+            reference value for each axis. This is used for applying the
+            appropriate phase shifts. If a scalar, the same reference
+            applies to all axes. [0.]
+        out_ref - same as inref but it applies to the output axis. [0]
 
-        Returns:
-            Nothing
+        Returns
+        -------
+        None
         """
 
         super(RRTransform, self).__init__(ndim, ft_type, in_axes, out_axes,
@@ -785,8 +868,8 @@ class RITransform(Transform):
 
     """
 
-    def __init__(self, in_ax, out_ax, in_center=False, out_center=False,
-                 in_ref=0., out_ref=0.):
+    def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
+                 in_center=False, out_center=False, in_ref=0., out_ref=0.):
         """
         Desc.
         Args:
@@ -906,23 +989,64 @@ class RITransform(Transform):
 
 class IITransform(Transform):
     """
-    Desc.
+    A class for performing Fourier transforms of data defined at irregular
+    intervals onto a coordinate axis that is also sampled at irregular
+    intervals.
 
-    Attributes:
+    Parameters
+    ----------
+    *Only those specific to* ``IITransform`` *are listed. See docs for*
+    ``Transform`` *for further information.*
 
-    Methods:
+    in_axes : {ndarray, list of ndarrays}
+        Definition of the irregularly spaced coordinates for each axis.
+    out_axes : {ndarray, list of ndarrays}
+        Definition of the irregularly spaced coordinates for each axis.
+    hermitianize : {bool, list of bools}, *optional*
+        Indicate whether the input array needs to be "hermitianized", meaning
+        that the hermitian conjugate pairs of the given input should also be
+        used during transformation. (default: False)
+    in_grid : {tuple, ndarray, list of tuples or ndarrays}
+        Defines a suitable grid to use for gridding of the data. *In the future
+        this may be replaced with a method for automatically setting a grid.*
 
+    Attributes
+    ----------
+    *Only those specific to* ``IITransform`` *are listed. See docs for*
+    ``Transform`` *for further information.*
+
+    Notes
+    -----
+    This functionality is a bit experimental. Be careful with it.
     """
 
     def __init__(self, ndim, ft_type='f', in_axes=None, out_axes=None,
                  in_center=False, out_center=False, in_ref=0., out_ref=0.,
-                 hermitianize=False, grid=None):
+                 hermitianize=False, in_grid=None):
         """
-        Desc.
-        Args:
+        Initializes the IITransform class.
 
-        Returns:
+        Parameters
+        ----------
+        *Only those specific to* ``IITransform`` *are listed. See docs for*
+        ``Transform`` *for further information.*
 
+        in_axes : {ndarray, list of ndarrays}
+            Definition of the irregularly spaced coordinates for each axis.
+        out_axes : {ndarray, list of ndarrays}
+            Definition of the irregularly spaced coordinates for each axis.
+        hermitianize : {bool, list of bools}, *optional*
+            Indicate whether the input array needs to be "hermitianized",
+            meaning that the hermitian conjugate pairs of the given input
+            should also be used during transformation. (default: False)
+        in_grid : {tuple, ndarray, list of tuples or ndarrays}
+            Defines a suitable grid to use for gridding of the data. *In the
+            future this may be replaced with a method for automatically setting
+            a grid.*
+
+        Returns
+        -------
+        None
         """
         super(IITransform, self).__init__(ndim, ft_type, in_axes, out_axes,
                                           in_center, out_center,
@@ -930,8 +1054,8 @@ class IITransform(Transform):
 
         self.in_axes = self._parse_iregular_axes(in_axes)
         self.out_axes = self._parse_iregular_axes(out_axes)
-        # TODO: Figure out how to deal with this situation...
 
+        self.in_grid = self._parse_regular_axes(in_grid)
         self.hermitianize = self._parse_hermitianize_arg(hermitianize)
 
         for i in range(self.ndim):
@@ -939,38 +1063,93 @@ class IITransform(Transform):
                 raise Exception("Must define both in_axes and out_axes " +
                                 "for IITransform!")
 
+        self.grid_func = GRID_FUNCS[self.ndim]
         self.degrid_func = DEGRID_FUNCS[self.ndim]
         self.gridcorr_func = GRIDCORR_FUNCS[self.ndim]
 
     def run(self, data):
         """
-        Desc.
-        Args:
+        Performs the irregular to irregular transformation.
 
-        Returns:
+        Parameters
+        ----------
+        data : ndarray
+            The data array to be transformed.
 
+        Returns
+        -------
+        tdata : ndarray
+            The transformed data.
         """
+
+        # TODO: Write this!
+
         pass
 
-    def get_inverse_transform(self):
+    def get_inverse_transform(self, hermitianize=False):
         """
         Desc.
-        Args:
 
-        Returns:
+        Parameters
+        ----------
+        hermitianize : {bool, list of bools}
+            Indicates whether the input array in the inverse transform oper-
+            ation should be hermitianized.
 
+        Returns
+        -------
+        it : IITransform
+            The inverse of the present transform operation.
         """
-        pass
+        # FIXME: Put this in its own function, or just store the ft_type that
+        #   is passed into __init__() because I use this over and over.
+        ft_type = []
+        for i in range(self.ndim):
+            if self.ft_type[i] == NONE:
+                ft_type.append(FTT_NONE)
+            elif self.ft_type[i] == FFT:
+                ft_type.append(FTT_IFFT)
+            else:
+                ft_type.append(FTT_FFT)
+
+        # FIXME: Wow, this is convoluted. Should be easier.
+        din = list()
+        nin = list()
+        for i in range(self.ndim):
+            din.append(self.in_grid[i][1] - self.in_grid[i][0])
+            nin.append(len(self.in_grid[i]))
+        [dout, nout] = get_conjugate_axes(din, nin)
+        outgrid = []
+        for i in range(self.ndim):
+            outgrid.append((dout[i], nout[i]))
+
+        it = IITransform(self.ndim, ft_type, self.out_axes, self.in_axes,
+                         self.out_center, self.in_center, self.out_ref,
+                         self.in_ref, hermitianize, outgrid)
+
+        return it
 
     def _check_data(self, data):
         """
         Desc.
-        Args:
 
-        Returns:
+        Parameters
+        ----------
+        data : ndarray
+            The data array, to be procced using run, to be checked.
 
+        Returns
+        -------
+        result : bool
+            Returns true if the data checks out, False otherwise.
         """
-        pass
+        if type(data) != np.ndarray:
+            raise Exception("Data must be a numpy array.")
+
+        if len(data) != len(self.in_axes[0]):
+            raise Exception("Data array has the incorrect length!")
+
+        return True
 
 
 ###############################################################################
@@ -1081,7 +1260,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True,
     # Different ftmachine options
     FTM_FFT = 'fft'
     FTM_IFFT = 'ifft'
-    FTM_NONE = 'none'
+    FTM_NONE = 'none'  # analysis:ignore
 
     ###########################################################################
     # Validate the inputs...
