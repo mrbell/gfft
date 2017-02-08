@@ -437,7 +437,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             if do_postshift:
                 xmin = -0.5*Nx*dx
             du = 1./dx/Nx/alpha
-            Nu = alpha*Nx
+            Nu = int(alpha*Nx)
             umin = 0.
             if do_preshift:
                 umin = -0.5*Nu*du
@@ -450,14 +450,14 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             Nx = out_ax[0][1]
             xmin = 0.
             du = 1./dx/Nx/alpha
-            Nu = alpha*Nx
+            Nu = int(alpha*Nx)
             umin = 0.
             
             dy = out_ax[1][0]
             Ny = out_ax[1][1]
             ymin = 0.
             dv = 1./dy/Ny/alpha
-            Nv = alpha*Ny
+            Nv = int(alpha*Ny)
             vmin = 0.
             
             if do_preshift:
@@ -489,21 +489,21 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             Nx = out_ax[0][1]
             xmin = 0.
             du = 1./dx/Nx/alpha
-            Nu = alpha*Nx
+            Nu = int(alpha*Nx)
             umin = 0.
             
             dy = out_ax[1][0]
             Ny = out_ax[1][1]
             ymin = 0.
             dv = 1./dy/Ny/alpha
-            Nv = alpha*Ny
+            Nv = int(alpha*Ny)
             vmin = 0.
             
             dz = out_ax[2][0]
             Nz = out_ax[2][1]
             zmin = 0.
             dw = 1./dz/Nz/alpha
-            Nw = alpha*Nz
+            Nw = int(alpha*Nz)
             wmin = 0.
 
                 
@@ -628,7 +628,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             if do_preshift:
                 xmin = -0.5*Nx*dx
             du = 1./dx/Nx/alpha
-            Nu = alpha*Nx
+            Nu = int(alpha*Nx)
             umin = 0.
             if do_postshift:
                 umin = -0.5*Nu*du
@@ -638,14 +638,14 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             Nx = in_ax[0][1]
             xmin = 0.
             du = 1./dx/Nx/alpha
-            Nu = alpha*Nx
+            Nu = int(alpha*Nx)
             umin = 0.
             
             dy = in_ax[1][0]
             Ny = in_ax[1][1]
             ymin = 0.
             dv = 1./dy/Ny/alpha
-            Nv = alpha*Ny
+            Nv = int(alpha*Ny)
             vmin = 0.
                 
             if do_postshift:
@@ -672,21 +672,21 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             Nx = in_ax[0][1]
             xmin = 0.
             du = 1./dx/Nx/alpha
-            Nu = alpha*Nx
+            Nu = int(alpha*Nx)
             umin = 0.
             
             dy = in_ax[1][0]
             Ny = in_ax[1][1]
             ymin = 0.
             dv = 1./dy/Ny/alpha
-            Nv = alpha*Ny
+            Nv = int(alpha*Ny)
             vmin = 0.
             
             dz = in_ax[2][0]
             Nz = in_ax[2][1]
             zmin = 0.
             dw = 1./dz/Nz/alpha
-            Nw = alpha*Nz
+            Nw = int(alpha*Nz)
             wmin = 0.
             
             if do_postshift:
@@ -734,6 +734,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             tndxy = int(0.5*Ny*(alpha-1))
             inp = inp/gridding.get_grid_corr_2d(dx, Nx, xmin, dy, Ny, ymin, \
                 du, dv, W, alpha)
+
             inp_oversam = np.zeros((Nu,Nv), dtype=complex)
             
             xl = 0
@@ -827,7 +828,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             # everything in here is out of date... needs total overhaul!
             if N == 1:
                 du = in_ax[1][0][0]
-                Nu = in_ax[1][0][1]*alpha 
+                Nu = int(in_ax[1][0][1]*alpha )
                 umin = 0.
                 if do_preshift:
                     umin = -0.5*Nu*du
@@ -848,7 +849,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 elif in_zero_center[0] == True:
                     xmin = -0.5*Nx*dx
                 du = 1./dx/Nx/alpha
-                Nu = alpha*Nx
+                Nu = int(alpha*Nx)
                 umin = 0.
                 if do_postshift:
                     umin = -0.5*Nu*du
@@ -861,7 +862,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 elif in_zero_center[1] == True:
                     ymin = -0.5*Ny*dy
                 dv = 1./dy/Ny/alpha
-                Nv = alpha*Ny
+                Nv = int(alpha*Ny)
                 vmin = 0.
                 if do_postshift:
                     vmin = -0.5*Nv*dv
@@ -877,7 +878,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 elif in_zero_center[0] == True:
                     xmin = -0.5*Nx*dx
                 du = 1./dx/Nx/alpha
-                Nu = alpha*Nx
+                Nu = int(alpha*Nx)
                 umin = 0.
                 if do_postshift:
                     umin = -0.5*Nu*du
@@ -890,7 +891,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 elif in_zero_center[1] == True:
                     ymin = -0.5*Ny*dy
                 dv = 1./dy/Ny/alpha
-                Nv = alpha*Ny
+                Nv = int(alpha*Ny)
                 vmin = 0.
                 if do_postshift:
                     vmin = -0.5*Nv*dv
@@ -903,7 +904,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 elif in_zero_center[2] == True:
                     zmin = -0.5*Nz*dz
                 dw = 1./dz/Nz/alpha
-                Nw = alpha*Nz
+                Nw = int(alpha*Nz)
                 wmin = 0.
                 if do_postshift:
                     wmin = -0.5*Nw*dw
@@ -919,7 +920,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 if do_postshift:
                     xmin = -0.5*Nx*dx
                 du = 1./dx/Nx/alpha
-                Nu = Nx*alpha
+                Nu = int(Nx*alpha)
                 umin = 0.
                 if do_preshift:
                     umin = -0.5*Nu*du
@@ -931,7 +932,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 Nx = out_ax[1][0][1]
                 xmin = 0.
                 du = 1./dx/Nx/alpha
-                Nu = alpha*Nx
+                Nu = int(alpha*Nx)
                 umin = 0.
             
                 dy = out_ax[1][0]
@@ -968,7 +969,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 Nx = out_ax[1][0][1]
                 xmin = 0.
                 du = 1./dx/Nx/alpha
-                Nu = alpha*Nx
+                Nu = int(alpha*Nx)
                 umin = 0.
             
                 dy = out_ax[1][1][0]
