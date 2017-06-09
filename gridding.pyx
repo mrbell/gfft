@@ -79,7 +79,7 @@ def grid_3d(np.ndarray[DTYPE_t,ndim=1] u, np.ndarray[DTYPE_t,ndim=1] v,\
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu1 = \
             np.zeros(W, dtype=DTYPE)
         cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis1 = \
-            np.zeros(W, dtype=DTYPE)
+            np.zeros(W, dtype=CTYPE)
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv1 = \
             np.zeros(W, dtype=DTYPE)
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw1 = \
@@ -90,7 +90,7 @@ def grid_3d(np.ndarray[DTYPE_t,ndim=1] u, np.ndarray[DTYPE_t,ndim=1] v,\
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tu2 =\
             np.zeros(W**2, dtype=DTYPE)
         cdef np.ndarray[CTYPE_t, ndim=1, mode='c'] tvis2 = \
-            np.zeros(W**2, dtype=DTYPE)
+            np.zeros(W**2, dtype=CTYPE)
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tv2 = \
             np.zeros(W**2, dtype=DTYPE)
         cdef np.ndarray[DTYPE_t, ndim=1, mode='c'] tw2 = \
@@ -544,7 +544,7 @@ cdef inline void grid_1d_from_2d(np.ndarray[DTYPE_t,ndim=1] x, \
 ################################################################################
 
 def grid_1d(np.ndarray[DTYPE_t,ndim=1] u, np.ndarray[CTYPE_t,ndim=1] vis, \
-    double du, int Nu, double umin, int W, double alpha, bool hermitianize):
+    double du, int Nu, double umin, double alpha, int W, bool hermitianize):
         """
         Grid the data in w, Qvix, Uvis in 1D (x) and duplicate orthogonal axes
         """
@@ -708,3 +708,4 @@ cdef inline double inv_gcf_kaiser(double x, double dk, int W, double beta):
 
 
     return c/c0
+

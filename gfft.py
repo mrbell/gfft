@@ -442,7 +442,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             if do_preshift:
                 umin = -0.5*Nu*du
 
-            inp_grid = gridding.grid_1d(in_ax[0], inp, du, Nu, umin, W, alpha, \
+            inp_grid = gridding.grid_1d(in_ax[0], inp, du, Nu, umin, alpha, W, \
                 hermitianized_axes[0])
 
         elif N == 2:
@@ -533,7 +533,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                         zmin = -0.5*Nz*dz
 
             inp_grid = gridding.grid_3d(in_ax[0], in_ax[1], in_ax[2], inp, \
-                du, Nu, umin, dv, Nv, vmin, dw, Nw, wmin, W, alpha, \
+                du, Nu, umin, dv, Nv, vmin, dw, Nw, wmin, alpha, W, \
                 hermitianized_axes[0], hermitianized_axes[1], \
                 hermitianized_axes[2])
 
@@ -758,8 +758,8 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
             tndxy = int(0.5*Ny*(alpha-1))
             tndxz = int(0.5*Nz*(alpha-1))
             inp = inp/gridding.get_grid_corr_3d(dx, Nx, xmin, dy, Ny, ymin, \
-                dz, Nz, zmin, du, dv, dz, W, alpha)
-            inp_oversam = np.zeros((Nu,Nv,Nw))
+                dz, Nz, zmin, du, dv, dw, W, alpha)
+            inp_oversam = np.zeros((Nu,Nv,Nw), dtype=complex)
 
             xl = 0
             yl = 0
@@ -935,8 +935,8 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
                 Nu = int(alpha*Nx)
                 umin = 0.
 
-                dy = out_ax[1][0]
-                Ny = out_ax[1][1]
+                dy = out_ax[1][1][0]
+                Ny = out_ax[1][1][1]
                 ymin = 0.
                 dv = 1./dy/Ny/alpha
                 Nv = alpha*Ny
@@ -1018,7 +1018,7 @@ def gfft(inp, in_ax=[], out_ax=[], ftmachine='fft', in_zero_center=True, \
 
         # grid
         if N == 1:
-            inp_grid = gridding.grid_1d(in_ax[0], inp, du, Nu, umin, W, alpha, \
+            inp_grid = gridding.grid_1d(in_ax[0], inp, du, Nu, umin, alpha, W, \
                 hermitianized_axes[0])
         elif N == 2:
             inp_grid = gridding.grid_2d(in_ax[0], in_ax[1], inp, du, Nu, umin, \
