@@ -19,4 +19,4 @@ setup(name="gfft",
       author_email='mrbell@mpa-garching.mpg.de',
       packages=['gfft'],
       package_dir={'gfft': ''},
-      ext_modules=[ext], cmdclass = {'build_ext': build_ext})   
+      ext_modules=[ext], cmdclass = {'build_ext': build_ext})
